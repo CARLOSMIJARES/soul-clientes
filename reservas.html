@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>reservas | SOUL Concept Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Raleway', sans-serif;
+      background-color: #e7ceb4;
+      color: white;
+    }
+    #resumenModal {
+      animation: aparecer 0.4s ease-out forwards;
+    }
+    @keyframes aparecer {
+      0% { transform: scale(0.8); opacity: 0; filter: brightness(0.8); }
+      100% { transform: scale(1); opacity: 1; filter: brightness(1.2); }
+    }
+  </style>
+</head>
+<body class="min-h-screen relative">
+
+  <!-- HEADER -->
+  <header class="w-full h-[150px] sticky top-0 z-40 overflow-hidden bg-[#DABEA3] flex items-center justify-center">
+    <img src="logo.png" alt="SOUL Concept Studio" class="h-full object-contain" />
+  </header>
+
+  <!-- USER INFO -->
+  <section class="text-center mt-4">
+    <h2 class="text-lg text-black font-semibold">Bienvenida, <span id="nombreUsuario">Cliente</span></h2>
+    <p class="text-black text-sm"><span id="emailUsuario">Email</span></p>
+  </section>
+
+  <!-- RESERVA FORM -->
+  <main class="flex justify-center items-start mt-6 px-4">
+    <div class="bg-white/10 backdrop-blur-md border border-black/20 rounded-2xl p-8 shadow-xl w-full max-w-lg">
+      <h2 class="text-2xl font-semibold text-center mb-6 text-black">Reserva tu cita</h2>
+
+      <form class="space-y-4" id="formReserva">
+        <div>
+          <label class="block mb-1 text-black">Fecha</label>
+          <input id="fechaCita" type="date" class="w-full p-2 rounded-lg bg-black/20 text-black" required>
+        </div>
+
+        <div>
+          <label class="block mb-1 text-black">Hora</label>
+          <select id="horaCita" class="w-full p-2 rounded-lg bg-black/20 text-black" required>
+            <option value="" disabled selected>Selecciona una hora</option>
+            <option value="10:00">10:00</option>
+            <option value="12:00">12:00</option>
+            <option value="14:00">14:00</option>
+            <option value="16:00">16:00</option>
+            <option value="18:00">18:00</option>
+            <option value="20:00">20:00</option>
+          </select>
+        </div>
+
+        <div id="serviciosContainer"></div>
+        <button type="button" id="agregarServicioBtn" class="w-full bg-white/30 text-black py-2 rounded-lg hover:bg-white/50">➕ Agregar servicio</button>
+
+        <div id="totalInfo" class="text-black text-sm mt-2"></div>
+
+        <div class="mt-4">
+          <label for="manicuristaSelect" class="block mb-1 text-black">Selecciona manicurista</label>
+          <select id="manicuristaSelect" class="w-full p-2 rounded-lg bg-black/20 text-black" required>
+            <option value="aleatorio" selected>Aleatorio</option>
+            <option value="norleannys">Norleannys</option>
+            <option value="dalia">Dalia</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full mt-4 bg-black text-white py-2 rounded-lg hover:bg-white hover:text-black transition">Reservar</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- MODAL -->
+  <div id="resumenModal" class="fixed inset-0 bg-black/60 flex items-center justify-center hidden z-50">
+    <div class="bg-white text-black rounded-2xl p-6 w-full max-w-md text-center shadow-2xl">
+      <h3 class="text-xl font-bold mb-4">¡Reserva Confirmada!</h3>
+      <p id="resumenContenido" class="text-sm mb-4"></p>
+      <button onclick="cerrarModal()" class="mt-2 px-6 py-2 bg-black text-white rounded-lg hover:bg-white hover:text-black transition">Aceptar</button>
+    </div>
+  </div>
+
+  <audio id="sonidoConfirmacion" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_b0a20838a3.mp3" preload="auto"></audio>
+
+  <!-- FIREBASE CONFIG -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD08h44cuSgH33LCfgeUOquRtK5q-WLhl4",
+      authDomain: "soul-concept-studio-37175.firebaseapp.com",
+      projectId: "soul-concept-studio-37175",
+      storageBucket: "soul-concept-studio-37175.appspot.com",
+      messagingSenderId: "1012154216474",
+      appId: "1:1012154216474:web:e43609177c22da585be1a3",
+      measurementId: "G-ZLL107ZRDP"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
+
+  <!-- LÓGICA JS -->
+  <script>
+    const servicios = [
+      { nombre: "ACRILICO (LARGO 1-2)", precio: 30, tiempo: 120 },
+      { nombre: "ACRILICO (LARGO 3-4)", precio: 35, tiempo: 135 },
+      { nombre: "BABY BOOMER", precio: 35, tiempo: 120 },
+      { nombre: "CAPA FLEX (REFUERZO)", precio: 25, tiempo: 120 },
+      { nombre: "GEL (LARGO 1-2)", precio: 30, tiempo: 120 },
+      { nombre: "GEL (LARGO 3-4)", precio: 35, tiempo: 135 },
+      { nombre: "MANICURA EXPRESS", precio: 15, tiempo: 45 },
+      { nombre: "MANICURA SEMIPERMANENTE (CON RETIRO)", precio: 20, tiempo: 120 },
+      { nombre: "MANICURA SEMIPERMANENTE (PRIMERA PUESTA)", precio: 18, tiempo: 60 },
+      { nombre: "MANICURA TRADICIONAL (SIN ESMALTE)", precio: 10, tiempo: 30 },
+      { nombre: "PEDICURA (SOLO ESMALTE SEMIPERMANENTE)", precio: 18, tiempo: 60 },
+      { nombre: "PEDICURA (SOLO ESMALTE TRADICIONAL)", precio: 10, tiempo: 45 },
+      { nombre: "PEDICURA + (ESMALTE TRADICIONAL COMPLETO)", precio: 20, tiempo: 90 },
+      { nombre: "PEDICURA COMPLETA + (ESMALTE SEMIPERMANENTE)", precio: 28, tiempo: 135 },
+      { nombre: "PEDICURA TRADICIONAL (SIN ESMALTE)", precio: 18, tiempo: 60 },
+      { nombre: "RECONSTRUCCION UÑAS MORDIDAS", precio: 35, tiempo: 120 },
+      { nombre: "RETIRO ACRILICO", precio: 12, tiempo: 60 },
+      { nombre: "RETIRO GEL", precio: 12, tiempo: 60 },
+      { nombre: "RETIRO SEMIPERMANENTE", precio: 7, tiempo: 60 },
+      { nombre: "SOLO CORTAR UÑAS (MANOS)", precio: 5, tiempo: 20 },
+      { nombre: "SOLO CORTAR UÑAS (PIES)", precio: 5, tiempo: 30 },
+      { nombre: "UÑA ROTA (MANOS)", precio: 2, tiempo: 15 },
+      { nombre: "UÑA ROTA (PIES)", precio: 3, tiempo: 15 },
+      { nombre: "UÑAS ENCARNADAS", precio: 2, tiempo: 5 }
+    ];
+
+    const serviciosContainer = document.getElementById("serviciosContainer");
+    const agregarBtn = document.getElementById("agregarServicioBtn");
+    const totalInfo = document.getElementById("totalInfo");
+
+    function crearSelectServicio() {
+      const wrapper = document.createElement("div");
+      wrapper.className = "mb-2 flex items-center gap-2";
+
+      const select = document.createElement("select");
+      select.className = "w-full p-2 rounded-lg bg-black/20 text-black servicio-select";
+      select.required = true;
+
+      select.innerHTML = `<option disabled selected value="">Selecciona un servicio</option>` +
+        servicios.map(s => `<option value="${s.nombre}" data-precio="${s.precio}" data-tiempo="${s.tiempo}">${s.nombre} (€${s.precio})</option>`).join("");
+
+      const eliminar = document.createElement("button");
+      eliminar.textContent = "❌";
+      eliminar.type = "button";
+      eliminar.className = "text-red-600 font-bold";
+      eliminar.onclick = () => {
+        wrapper.remove();
+        actualizarTotales();
+      };
+
+      select.onchange = actualizarTotales;
+
+      wrapper.appendChild(select);
+      wrapper.appendChild(eliminar);
+      serviciosContainer.appendChild(wrapper);
+    }
+
+    agregarBtn.onclick = () => crearSelectServicio();
+    crearSelectServicio();
+
+    function actualizarTotales() {
+      const selects = document.querySelectorAll(".servicio-select");
+      let total = 0, tiempo = 0;
+      selects.forEach(select => {
+        const opt = select.selectedOptions[0];
+        if (opt?.dataset.precio) {
+          total += parseFloat(opt.dataset.precio);
+          tiempo += parseInt(opt.dataset.tiempo);
+        }
+      });
+      totalInfo.textContent = `Total: €${total} | Duración: ${tiempo} min`;
+    }
+
+    const hoy = new Date().toISOString().split("T")[0];
+    document.getElementById("fechaCita").setAttribute("min", hoy);
+
+    document.getElementById("fechaCita").addEventListener("input", e => {
+      const selectedDate = new Date(e.target.value);
+      const now = new Date();
+
+      if (selectedDate.getDay() === 0) {
+        alert("Domingos no disponibles.");
+        e.target.value = "";
+        return;
+      }
+
+      const horaSelect = document.getElementById("horaCita");
+      const originalOptions = ["10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
+
+      horaSelect.innerHTML = `<option value="" disabled selected>Selecciona una hora</option>`;
+
+      const esHoy = selectedDate.toDateString() === now.toDateString();
+      originalOptions.forEach(hora => {
+        const [h, m] = hora.split(":");
+        const horaDate = new Date(selectedDate);
+        horaDate.setHours(parseInt(h), parseInt(m), 0, 0);
+
+        if (!esHoy || horaDate > now) {
+          const option = document.createElement("option");
+          option.value = hora;
+          option.textContent = hora;
+          horaSelect.appendChild(option);
+        }
+      });
+    });
+// Función para capitalizar cada palabra
+function capitalizarPalabras(str) {
+  return str.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+firebase.auth().onAuthStateChanged(async user => {
+  if (!user) return location.href = "login.html";
+
+  const nombreUsuarioElement = document.getElementById("nombreUsuario");
+  const emailUsuarioElement = document.getElementById("emailUsuario");
+
+  emailUsuarioElement.textContent = user.email;
+
+  try {
+    const userDoc = await db.collection("CLIENTES").doc(user.uid).get();
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      let nombre = userData.nombre || "";
+      let apellido = userData.apellido || "";
+      const nombreCompleto = `${capitalizarPalabras(nombre)} ${capitalizarPalabras(apellido)}`.trim();
+      nombreUsuarioElement.textContent = nombreCompleto || "CLIENTES";
+    } else {
+      nombreUsuarioElement.textContent = capitalizarPalabras(user.displayName || "CLIENTES");
+    }
+  } catch (error) {
+    console.error("Error al obtener datos del cliente:", error);
+    nombreUsuarioElement.textContent = capitalizarPalabras(user.displayName || "CLIENTES");
+  }
+});
+
+document.getElementById("formReserva").addEventListener("submit", async e => {
+  e.preventDefault();
+  const user = firebase.auth().currentUser;
+  
+  let nombre = user.displayName || "CLIENTES";
+  try {
+    const userDoc = await db.collection("CLIENTES").doc(user.uid).get();
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      let nombreStr = userData.nombre || "";
+      let apellidoStr = userData.apellido || "";
+      nombre = `${capitalizarPalabras(nombreStr)} ${capitalizarPalabras(apellidoStr)}`.trim() || nombre;
+    } else {
+      nombre = capitalizarPalabras(nombre);
+    }
+  } catch (error) {
+    console.error("Error al obtener datos del cliente en submit:", error);
+    nombre = capitalizarPalabras(nombre);
+  }
+
+  const email = user.email;
+  const fecha = document.getElementById("fechaCita").value;
+  const hora = document.getElementById("horaCita").value;
+  let manicurista = document.getElementById("manicuristaSelect").value;
+  if (manicurista === "aleatorio") {
+    const opciones = ["norleannys", "dalia"];
+    manicurista = opciones[Math.floor(Math.random() * opciones.length)];
+  }
+
+  const serviciosElegidos = Array.from(document.querySelectorAll(".servicio-select"))
+    .map(sel => sel.value).filter(v => v);
+
+  if (!fecha || !hora || !manicurista || serviciosElegidos.length === 0) {
+    return alert("Completa todos los campos");
+  }
+
+  let total = 0;
+  let duracion = 0;
+  for (const nombre of serviciosElegidos) {
+    const srv = servicios.find(s => s.nombre === nombre);
+    if (srv) {
+      total += srv.precio;
+      duracion += srv.tiempo;
+    }
+  }
+
+  await db.collection("reservas").add({
+    nombre, email, fecha, hora, servicios: serviciosElegidos, manicurista, total, duracion,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  const resumen = `Nombre: ${nombre}<br>Email: ${email}<br>Fecha: ${fecha}<br>Hora: ${hora}<br>Manicurista: ${manicurista}<br>Servicios: ${serviciosElegidos.join(", ")}<br>Total: €${total}<br>Duración: ${duracion} min`;
+  document.getElementById("resumenContenido").innerHTML = resumen;
+  document.getElementById("resumenModal").classList.remove("hidden");
+  document.getElementById("sonidoConfirmacion").play();
+});
+
+    function cerrarModal() {
+      document.getElementById("resumenModal").classList.add("hidden");
+      firebase.auth().signOut().then(() => location.href = "login.html");
+    }
+  </script>
+</body>
+</html>
+<!-- 👆 FIN DEL HTML -->
