@@ -6,6 +6,8 @@
   <title>index | SOUL Concept Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <!-- Font Awesome -->
+
   <style>
     body {
       font-family: 'Raleway', sans-serif;
@@ -46,10 +48,13 @@
           <input type="email" id="email" required placeholder="tucorreo@ejemplo.com"
             class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none text-sm" />
         </div>
-        <div>
+        <div class="relative">
           <label for="password" class="block mb-1 text-black">Contraseña</label>
           <input type="password" id="password" required placeholder="Tu contraseña"
             class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none text-sm" />
+          <button type="button" id="togglePassword" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-black">
+            <i class="fas fa-eye"></i>
+          </button>
         </div>
         <button type="submit" id="loginBtn"
           class="w-full mt-4 bg-black text-[#e7ceb4] font-semibold py-2 rounded-lg hover:bg-gray-800 transition relative text-sm">
@@ -157,6 +162,15 @@
             alert("Hubo un error al enviar el enlace de recuperación.");
           });
       }
+    });
+
+    // Mostrar/ocultar contraseña
+    const togglePassword = document.getElementById("togglePassword");
+    togglePassword.addEventListener("click", function () {
+      const passwordInput = document.getElementById("password");
+      const type = passwordInput.type === "password" ? "text" : "password";
+      passwordInput.type = type;
+      this.querySelector("i").classList.toggle("fa-eye-slash");
     });
   </script>
 </body>
