@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Login | SOUL Concept Studio</title>
+  <title>index | SOUL Concept Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet" />
   <style>
@@ -11,6 +11,8 @@
       font-family: 'Raleway', sans-serif;
       background-color: #e7ceb4;
       color: black;
+      margin: 0;
+      padding: 0;
     }
     .spinner {
       border: 4px solid rgba(255, 255, 255, 0.3);
@@ -26,15 +28,15 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between relative">
+<body class="min-h-screen flex flex-col">
 
   <!-- HEADER CON LOGO -->
-  <header class="w-full h-[120px] sticky top-0 z-40 overflow-hidden bg-[#DABEA3] flex items-center justify-center">
+  <header class="w-full h-[120px] bg-[#DABEA3] flex items-center justify-center">
     <img src="logo.png" alt="SOUL Concept Studio" class="h-full object-contain max-w-[90%]" />
   </header>
 
   <!-- FORMULARIO DE LOGIN -->
-  <main class="flex flex-col items-center px-4 mt-0"> <!-- Eliminado el margen superior -->
+  <main class="flex flex-col items-center justify-start px-4 w-full mt-0"> <!-- Eliminado margen adicional -->
     <div class="bg-white/10 backdrop-blur-md border border-black/20 rounded-2xl p-6 shadow-xl w-full max-w-md">
       <h2 class="text-2xl font-semibold text-center mb-6 text-black">Iniciar sesión</h2>
 
@@ -64,7 +66,7 @@
 
       <p class="text-xs text-center mt-4 text-black">
         ¿No tienes una cuenta?
-        <a href="registro.html" class="underline hover:text-gray-700">Regístrate aquí</a>
+        <a href="registrar_cliente.html" class="underline hover:text-gray-700">Regístrate aquí</a>
       </p>
     </div>
   </main>
