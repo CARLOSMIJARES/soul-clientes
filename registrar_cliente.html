@@ -6,6 +6,7 @@
   <title>Registrar Cliente | SOUL Concept Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"> <!-- FontAwesome -->
   <style>
     body {
       font-family: 'Raleway', sans-serif;
@@ -52,13 +53,32 @@
         </div>
         <div>
           <label for="password" class="block mb-1 text-black">Contraseña</label>
-          <input type="password" id="password" required placeholder="Crea una contraseña"
-            class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none">
+          <div class="relative">
+            <input type="password" id="password" required placeholder="Crea una contraseña"
+              class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none">
+            <button type="button" id="togglePassword" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <i class="fas fa-eye text-black w-6 h-6"></i> <!-- Ícono de ojo de FontAwesome -->
+            </button>
+          </div>
+
+          <!-- Mensajes de validación -->
+          <ul id="passwordValidation" class="mt-2 text-sm text-black">
+            <li id="uppercase" class="text-red-500">Debe contener al menos una letra mayúscula.</li>
+            <li id="lowercase" class="text-red-500">Debe contener al menos una letra minúscula.</li>
+            <li id="number" class="text-red-500">Debe contener al menos un número.</li>
+            <li id="length" class="text-red-500">Debe tener al menos 8 caracteres.</li>
+          </ul>
         </div>
+
         <div>
           <label for="passwordConfirm" class="block mb-1 text-black">Confirmar Contraseña</label>
-          <input type="password" id="passwordConfirm" required placeholder="Confirma tu contraseña"
-            class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none">
+          <div class="relative">
+            <input type="password" id="passwordConfirm" required placeholder="Confirma tu contraseña"
+              class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none">
+            <button type="button" id="togglePasswordConfirm" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <i class="fas fa-eye text-black w-6 h-6"></i> <!-- Ícono de ojo de FontAwesome -->
+            </button>
+          </div>
         </div>
 
         <button type="submit"
@@ -95,6 +115,12 @@
     const db = getFirestore(app);
 
     const form = document.getElementById('registroForm');
+    const passwordInput = document.getElementById('password');
+    const passwordValidation = document.getElementById('passwordValidation');
+    const uppercase = document.getElementById('uppercase');
+    const lowercase = document.getElementById('lowercase');
+    const number = document.getElementById('number');
+    const length = document.getElementById('length');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -136,7 +162,57 @@
         alert('Error: ' + error.message);
       }
     });
-  </script>
 
+    // Función para validar la contraseña
+    passwordInput.addEventListener('input', function () {
+      const passwordValue = passwordInput.value;
+
+      // Validar mayúsculas
+      const uppercaseReg = /[A-Z]/;
+      if (uppercaseReg.test(passwordValue)) {
+        uppercase.classList.replace('text-red-500', 'text-green-500');
+      } else {
+        uppercase.classList.replace('text-green-500', 'text-red-500');
+      }
+
+      // Validar minúsculas
+      const lowercaseReg = /[a-z]/;
+      if (lowercaseReg.test(passwordValue)) {
+        lowercase.classList.replace('text-red-500', 'text-green-500');
+      } else {
+        lowercase.classList.replace('text-green-500', 'text-red-500');
+      }
+
+      // Validar números
+      const numberReg = /[0-9]/;
+      if (numberReg.test(passwordValue)) {
+        number.classList.replace('text-red-500', 'text-green-500');
+      } else {
+        number.classList.replace('text-green-500', 'text-red-500');
+      }
+
+      // Validar longitud
+      if (passwordValue.length >= 8) {
+        length.classList.replace('text-red-500', 'text-green-500');
+      } else {
+        length.classList.replace('text-green-500', 'text-red-500');
+      }
+    });
+
+    // Mostrar/ocultar contraseña
+    const togglePassword = document.getElementById('togglePassword');
+    togglePassword.addEventListener('click', function () {
+      const type = passwordInput.type === 'password' ? 'text' : 'password';
+      passwordInput.type = type;
+      this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+
+    const togglePasswordConfirm = document.getElementById('togglePasswordConfirm');
+    togglePasswordConfirm.addEventListener('click', function () {
+      const type = document.getElementById('passwordConfirm').type === 'password' ? 'text' : 'password';
+      document.getElementById('passwordConfirm').type = type;
+      this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+  </script>
 </body>
 </html>
