@@ -22,6 +22,25 @@
       0% { transform: scale(0.8); opacity: 0; filter: brightness(0.8); }
       100% { transform: scale(1); opacity: 1; filter: brightness(1.2); }
     }
+    .hora-boton {
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background-color: #fff;
+      color: #000;
+      text-align: center;
+      user-select: none;
+      transition: background-color 0.2s, color 0.2s;
+    }
+    .hora-boton:hover {
+      background-color: #000;
+      color: #fff;
+    }
+    .hora-boton.selected {
+      background-color: #000;
+      color: #fff;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body class="min-h-screen relative">
@@ -43,37 +62,34 @@
       <h2 class="text-2xl font-semibold text-center mb-6 text-black">Reserva tu cita</h2>
 
       <form class="space-y-4" id="formReserva">
+        <!-- Fecha -->
         <div>
           <label class="block mb-1 text-black">Fecha</label>
-          <input id="fechaCita" type="date" class="w-full p-2 rounded-lg bg-black/20 text-black" required>
+          <input id="fechaCita" type="date" class="w-full p-2 rounded-lg bg-black/20 text-black" required min="" />
         </div>
 
-        <div>
-          <label class="block mb-1 text-black">Hora</label>
-          <select id="horaCita" class="w-full p-2 rounded-lg bg-black/20 text-black" required>
-            <option value="" disabled selected>Selecciona una hora</option>
-            <option value="10:00">10:00</option>
-            <option value="12:00">12:00</option>
-            <option value="14:00">14:00</option>
-            <option value="16:00">16:00</option>
-            <option value="18:00">18:00</option>
-            <option value="20:00">20:00</option>
-          </select>
-        </div>
-
-        <div id="serviciosContainer"></div>
-        <button type="button" id="agregarServicioBtn" class="w-full bg-white/30 text-black py-2 rounded-lg hover:bg-white/50">➕ Agregar servicio</button>
-
-        <div id="totalInfo" class="text-black text-sm mt-2"></div>
-
+        <!-- Manicurista -->
         <div class="mt-4">
           <label for="manicuristaSelect" class="block mb-1 text-black">Selecciona manicurista</label>
           <select id="manicuristaSelect" class="w-full p-2 rounded-lg bg-black/20 text-black" required>
-            <option value="aleatorio" selected>Aleatorio</option>
-            <option value="norleannys">Norleannys</option>
-            <option value="dalia">Dalia</option>
+            <option value="" disabled selected>Selecciona tu manicurista</option>
+            <option value="Norle">Norle</option>
+            <option value="Dalia">Dalia</option>
           </select>
         </div>
+
+        <!-- Horas disponibles -->
+        <div class="mt-4">
+          <label class="block mb-1 text-black">Selecciona hora</label>
+          <div id="horasDisponibles" class="grid grid-cols-8 gap-2 p-2 rounded-lg bg-black/20 text-black max-h-48 overflow-y-auto"></div>
+          <input type="hidden" id="horaSeleccionada" name="horaSeleccionada" required />
+        </div>
+
+        <!-- Servicios -->
+        <div id="serviciosContainer"></div>
+        <button type="button" id="agregarServicioBtn" class="w-full bg-white/30 text-black py-2 rounded-lg hover:bg-white/50">➕ Agregar servicio</button>
+
+        <div id="totalInfo" class="text-black text-sm mt-2">Total: €0 | Duración: 0 min</div>
 
         <button type="submit" class="w-full mt-4 bg-black text-white py-2 rounded-lg hover:bg-white hover:text-black transition">Reservar</button>
       </form>
@@ -92,6 +108,11 @@
   <audio id="sonidoConfirmacion" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_b0a20838a3.mp3" preload="auto"></audio>
 
   <!-- FIREBASE CONFIG -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+  <!-- FIREBASE CONFIG SCRIPT -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyD08h44cuSgH33LCfgeUOquRtK5q-WLhl4",
@@ -107,7 +128,7 @@
     const db = firebase.firestore();
   </script>
 
-  <!-- LÓGICA JS -->
+  <!-- LOGICA JS -->
   <script>
     const servicios = [
       { nombre: "ACRILICO (LARGO 1-2)", precio: 30, tiempo: 120 },
@@ -139,174 +160,247 @@
     const serviciosContainer = document.getElementById("serviciosContainer");
     const agregarBtn = document.getElementById("agregarServicioBtn");
     const totalInfo = document.getElementById("totalInfo");
+    const fechaInput = document.getElementById("fechaCita");
+    const manicuristaSelect = document.getElementById("manicuristaSelect");
+    const horasDisponiblesDiv = document.getElementById("horasDisponibles");
+    const horaSeleccionadaInput = document.getElementById("horaSeleccionada");
 
+    // Set min date to today
+    const hoy = new Date().toISOString().split("T")[0];
+    fechaInput.setAttribute("min", hoy);
+
+    // Crear select de servicios dinámicamente
     function crearSelectServicio() {
       const wrapper = document.createElement("div");
       wrapper.className = "mb-2 flex items-center gap-2";
 
       const select = document.createElement("select");
-      select.className = "w-full p-2 rounded-lg bg-black/20 text-black servicio-select";
+      select.className = "w-full p-2 rounded-lg bg-black/20 text-black";
       select.required = true;
 
-      select.innerHTML = `<option disabled selected value="">Selecciona un servicio</option>` +
-        servicios.map(s => `<option value="${s.nombre}" data-precio="${s.precio}" data-tiempo="${s.tiempo}">${s.nombre} (€${s.precio})</option>`).join("");
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "Selecciona un servicio";
+      defaultOption.disabled = true;
+      defaultOption.selected = true;
+      select.appendChild(defaultOption);
 
-      const eliminar = document.createElement("button");
-      eliminar.textContent = "❌";
-      eliminar.type = "button";
-      eliminar.className = "text-red-600 font-bold";
-      eliminar.onclick = () => {
+      servicios.forEach(s => {
+        const option = document.createElement("option");
+        option.value = s.nombre;
+        option.textContent = `${s.nombre} - €${s.precio} - ${s.tiempo} min`;
+        option.dataset.precio = s.precio;
+        option.dataset.tiempo = s.tiempo;
+        select.appendChild(option);
+      });
+
+      // Botón para eliminar este servicio
+      const eliminarBtn = document.createElement("button");
+      eliminarBtn.type = "button";
+      eliminarBtn.textContent = "❌";
+      eliminarBtn.title = "Eliminar servicio";
+      eliminarBtn.className = "text-black bg-red-400 rounded px-2 hover:bg-red-600 transition";
+
+      eliminarBtn.onclick = () => {
         wrapper.remove();
-        actualizarTotales();
+        actualizarTotal();
       };
 
-      select.onchange = actualizarTotales;
+      select.onchange = actualizarTotal;
 
       wrapper.appendChild(select);
-      wrapper.appendChild(eliminar);
+      wrapper.appendChild(eliminarBtn);
       serviciosContainer.appendChild(wrapper);
     }
 
-    agregarBtn.onclick = () => crearSelectServicio();
+    // Agregar el primer servicio al cargar
     crearSelectServicio();
 
-    function actualizarTotales() {
-      const selects = document.querySelectorAll(".servicio-select");
-      let total = 0, tiempo = 0;
+    agregarBtn.onclick = () => {
+      crearSelectServicio();
+    };
+
+    // Actualiza total y tiempo
+    function actualizarTotal() {
+      let totalPrecio = 0;
+      let totalTiempo = 0;
+      const selects = serviciosContainer.querySelectorAll("select");
       selects.forEach(select => {
-        const opt = select.selectedOptions[0];
-        if (opt?.dataset.precio) {
-          total += parseFloat(opt.dataset.precio);
-          tiempo += parseInt(opt.dataset.tiempo);
+        if (select.value) {
+          const opcionSeleccionada = select.options[select.selectedIndex];
+          totalPrecio += Number(opcionSeleccionada.dataset.precio);
+          totalTiempo += Number(opcionSeleccionada.dataset.tiempo);
         }
       });
-      totalInfo.textContent = `Total: €${total} | Duración: ${tiempo} min`;
+      totalInfo.textContent = `Total: €${totalPrecio} | Duración: ${totalTiempo} min`;
     }
 
-    const hoy = new Date().toISOString().split("T")[0];
-    document.getElementById("fechaCita").setAttribute("min", hoy);
+    // --- Horas Disponibles y lógica de selección ---
 
-    document.getElementById("fechaCita").addEventListener("input", e => {
-      const selectedDate = new Date(e.target.value);
-      const now = new Date();
+    const horasBase = [];
+    for(let h=9; h<=18; h++) {
+      horasBase.push(`${h.toString().padStart(2,'0')}:00`);
+      if(h < 18) horasBase.push(`${h.toString().padStart(2,'0')}:30`);
+    }
 
-      if (selectedDate.getDay() === 0) {
-        alert("Domingos no disponibles.");
-        e.target.value = "";
+    function horaAMinutos(hora) {
+      const [h, m] = hora.split(":").map(Number);
+      return h*60 + m;
+    }
+
+    function minutosAHora(min) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+    }
+
+    async function cargarHorasDisponibles() {
+      horasDisponiblesDiv.innerHTML = "";
+      horaSeleccionadaInput.value = "";
+
+      const fecha = fechaInput.value;
+      const manicurista = manicuristaSelect.value;
+
+      if (!fecha || !manicurista) {
         return;
       }
 
-      const horaSelect = document.getElementById("horaCita");
-      const originalOptions = ["10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
+      // Traer reservas de Firestore para fecha y manicurista
+      const snapshot = await db.collection("reservas")
+        .where("fecha", "==", fecha)
+        .where("manicurista", "==", manicurista)
+        .get();
 
-      horaSelect.innerHTML = `<option value="" disabled selected>Selecciona una hora</option>`;
+      const ocupados = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const inicioMin = horaAMinutos(data.hora);
+        const duracionMin = data.duracion || 30;
+        ocupados.push([inicioMin, inicioMin + duracionMin]);
+      });
 
-      const esHoy = selectedDate.toDateString() === now.toDateString();
-      originalOptions.forEach(hora => {
-        const [h, m] = hora.split(":");
-        const horaDate = new Date(selectedDate);
-        horaDate.setHours(parseInt(h), parseInt(m), 0, 0);
+      function estaLibre(inicio) {
+        const fin = inicio + 30;
+        return !ocupados.some(([occInicio, occFin]) => (inicio < occFin) && (fin > occInicio));
+      }
 
-        if (!esHoy || horaDate > now) {
-          const option = document.createElement("option");
-          option.value = hora;
-          option.textContent = hora;
-          horaSelect.appendChild(option);
+      horasBase.forEach(hora => {
+        const min = horaAMinutos(hora);
+        if (estaLibre(min)) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = hora;
+          btn.className = "hora-boton";
+
+          btn.onclick = () => {
+            Array.from(horasDisponiblesDiv.children).forEach(b => b.classList.remove("selected"));
+            btn.classList.add("selected");
+            horaSeleccionadaInput.value = hora;
+          };
+
+          horasDisponiblesDiv.appendChild(btn);
         }
       });
+    }
+
+    fechaInput.addEventListener("change", cargarHorasDisponibles);
+    manicuristaSelect.addEventListener("change", cargarHorasDisponibles);
+
+    // --- SUBMIT FORMULARIO ---
+
+    const formReserva = document.getElementById("formReserva");
+    const resumenModal = document.getElementById("resumenModal");
+    const resumenContenido = document.getElementById("resumenContenido");
+    const sonidoConfirmacion = document.getElementById("sonidoConfirmacion");
+
+    formReserva.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const nombre = document.getElementById("nombreUsuario").textContent || "Cliente";
+      const email = document.getElementById("emailUsuario").textContent || "cliente@correo.com";
+      const fecha = fechaInput.value;
+      const manicurista = manicuristaSelect.value;
+      const hora = horaSeleccionadaInput.value;
+
+      if (!fecha || !hora || !manicurista) {
+        return alert("Por favor, completa la fecha, manicurista y hora.");
+      }
+
+      // Servicios seleccionados
+      const selects = serviciosContainer.querySelectorAll("select");
+      let serviciosSeleccionados = [];
+      let totalPrecio = 0;
+      let totalTiempo = 0;
+
+      for (const select of selects) {
+        if (select.value) {
+          const opcion = servicios.find(s => s.nombre === select.value);
+          if (opcion) {
+            serviciosSeleccionados.push(opcion.nombre);
+            totalPrecio += opcion.precio;
+            totalTiempo += opcion.tiempo;
+          }
+        }
+      }
+
+      if (serviciosSeleccionados.length === 0) {
+        return alert("Debes seleccionar al menos un servicio.");
+      }
+
+      // Guardar reserva en Firestore
+      try {
+        await db.collection("reservas").add({
+            nombreusuario: nombre,
+          email: email,
+          fecha: fecha,
+          hora: hora,
+          manicurista: manicurista,
+          servicios: serviciosSeleccionados,
+          total: totalPrecio,
+          duracion: totalTiempo,
+          creado: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        resumenContenido.innerHTML = `
+          <strong>Fecha:</strong> ${fecha} <br/>
+          <strong>Hora:</strong> ${hora} <br/>
+          <strong>Manicurista:</strong> ${manicurista} <br/>
+          <strong>Servicios:</strong> ${serviciosSeleccionados.join(", ")} <br/>
+          <strong>Total:</strong> €${totalPrecio} <br/>
+          <strong>Duración:</strong> ${totalTiempo} min
+        `;
+
+        resumenModal.classList.remove("hidden");
+        sonidoConfirmacion.play();
+
+        // Reset form
+        formReserva.reset();
+        serviciosContainer.innerHTML = "";
+        crearSelectServicio();
+        totalInfo.textContent = "Total: €0 | Duración: 0 min";
+        horasDisponiblesDiv.innerHTML = "";
+        horaSeleccionadaInput.value = "";
+      } catch (error) {
+        alert("Error al guardar la reserva: " + error.message);
+      }
     });
-// Función para capitalizar cada palabra
-function capitalizarPalabras(str) {
-  return str.replace(/\b\w/g, c => c.toUpperCase());
-}
-
-firebase.auth().onAuthStateChanged(async user => {
-  if (!user) return location.href = "login.html";
-
-  const nombreUsuarioElement = document.getElementById("nombreUsuario");
-  const emailUsuarioElement = document.getElementById("emailUsuario");
-
-  emailUsuarioElement.textContent = user.email;
-
-  try {
-    const userDoc = await db.collection("CLIENTES").doc(user.uid).get();
-    if (userDoc.exists) {
-      const userData = userDoc.data();
-      let nombre = userData.nombre || "";
-      let apellido = userData.apellido || "";
-      const nombreCompleto = `${capitalizarPalabras(nombre)} ${capitalizarPalabras(apellido)}`.trim();
-      nombreUsuarioElement.textContent = nombreCompleto || "CLIENTES";
-    } else {
-      nombreUsuarioElement.textContent = capitalizarPalabras(user.displayName || "CLIENTES");
-    }
-  } catch (error) {
-    console.error("Error al obtener datos del cliente:", error);
-    nombreUsuarioElement.textContent = capitalizarPalabras(user.displayName || "CLIENTES");
-  }
-});
-
-document.getElementById("formReserva").addEventListener("submit", async e => {
-  e.preventDefault();
-  const user = firebase.auth().currentUser;
-  
-  let nombre = user.displayName || "CLIENTES";
-  try {
-    const userDoc = await db.collection("CLIENTES").doc(user.uid).get();
-    if (userDoc.exists) {
-      const userData = userDoc.data();
-      let nombreStr = userData.nombre || "";
-      let apellidoStr = userData.apellido || "";
-      nombre = `${capitalizarPalabras(nombreStr)} ${capitalizarPalabras(apellidoStr)}`.trim() || nombre;
-    } else {
-      nombre = capitalizarPalabras(nombre);
-    }
-  } catch (error) {
-    console.error("Error al obtener datos del cliente en submit:", error);
-    nombre = capitalizarPalabras(nombre);
-  }
-
-  const email = user.email;
-  const fecha = document.getElementById("fechaCita").value;
-  const hora = document.getElementById("horaCita").value;
-  let manicurista = document.getElementById("manicuristaSelect").value;
-  if (manicurista === "aleatorio") {
-    const opciones = ["norleannys", "dalia"];
-    manicurista = opciones[Math.floor(Math.random() * opciones.length)];
-  }
-
-  const serviciosElegidos = Array.from(document.querySelectorAll(".servicio-select"))
-    .map(sel => sel.value).filter(v => v);
-
-  if (!fecha || !hora || !manicurista || serviciosElegidos.length === 0) {
-    return alert("Completa todos los campos");
-  }
-
-  let total = 0;
-  let duracion = 0;
-  for (const nombre of serviciosElegidos) {
-    const srv = servicios.find(s => s.nombre === nombre);
-    if (srv) {
-      total += srv.precio;
-      duracion += srv.tiempo;
-    }
-  }
-
-  await db.collection("reservas").add({
-    nombre, email, fecha, hora, servicios: serviciosElegidos, manicurista, total, duracion,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  });
-
-  const resumen = `Nombre: ${nombre}<br>Email: ${email}<br>Fecha: ${fecha}<br>Hora: ${hora}<br>Manicurista: ${manicurista}<br>Servicios: ${serviciosElegidos.join(", ")}<br>Total: €${total}<br>Duración: ${duracion} min`;
-  document.getElementById("resumenContenido").innerHTML = resumen;
-  document.getElementById("resumenModal").classList.remove("hidden");
-  document.getElementById("sonidoConfirmacion").play();
-});
 
     function cerrarModal() {
-      document.getElementById("resumenModal").classList.add("hidden");
-      firebase.auth().signOut().then(() => location.href = "login.html");
+      resumenModal.classList.add("hidden");
     }
+
+    // Simulación de usuario (puedes quitar o reemplazar con tu lógica real)
+    // Actualiza la UI con datos de usuario autenticado
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("nombreUsuario").textContent = user.displayName || "Cliente";
+        document.getElementById("emailUsuario").textContent = user.email || "cliente@correo.com";
+      } else {
+        document.getElementById("nombreUsuario").textContent = "Invitado";
+        document.getElementById("emailUsuario").textContent = "no-login";
+      }
+    });
   </script>
+
 </body>
 </html>
-<!-- 👆 FIN DEL HTML -->
