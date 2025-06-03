@@ -268,13 +268,6 @@
     window.location.href = "login.html";
   }
 });
-
-
-  // Cerrar modal
-  function cerrarModal() {
-    document.getElementById("resumenModal").classList.add("hidden");
-  }
-
   function generarHorasBloqueadas(reservas, intervalo = 15) {
   const bloqueadas = new Set();
 
@@ -314,7 +307,16 @@ function generarHorasDelDia(inicioStr, finStr, intervalo = 15) {
 }
 
   // Escucha cambios de fecha y manicurista para cargar horas
-  fechaInput.addEventListener("change", cargarHorasDisponibles);
+ fechaInput.addEventListener("change", () => {
+  const fecha = new Date(fechaInput.value);
+  const diaSemana = fecha.getDay(); // 0 = domingo, 1 = lunes, ...
+  if (diaSemana === 0) {
+    alert("No se permiten reservas los domingos. Por favor, selecciona otro día.");
+    fechaInput.value = ""; // limpia la selección
+  } else {
+    // Si quieres hacer algo al seleccionar un día válido, aquí
+  }
+});
   manicuristaSelect.addEventListener("change", cargarHorasDisponibles);
 
  async function cargarHorasDisponibles() {
@@ -446,6 +448,24 @@ totalSpan.textContent = "0€";
 serviciosSelect.innerHTML = ""; // opcional si quieres reiniciar los servicios
 clienteSelect.selectedIndex = 0; // volver a seleccionar "elige un cliente"
 manicuristaSelect.selectedIndex = 0; // volver a seleccionar "elige un manicurista"
+
+
+  // Cerrar modal
+ function cerrarModal() {
+  document.getElementById("resumenModal").classList.add("hidden");
+
+  // Desloguear al usuario
+  firebase.auth().signOut()
+    .then(() => {
+      console.log("Usuario deslogueado.");
+      // Redirigir a login o actualizar UI
+      window.location.href = "/index.html"; // Cambia la ruta según tu proyecto
+    })
+    .catch((error) => {
+      console.error("Error al desloguear:", error);
+    });
+}
+
 
 </script>
 
