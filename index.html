@@ -48,15 +48,16 @@
           <input type="email" id="email" required placeholder="tucorreo@ejemplo.com"
             class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none text-sm" />
         </div>
-        <div class="relative">
-          <label for="password" class="block mb-1 text-black">Contraseña</label>
-          <input type="password" id="password" required placeholder="Tu contraseña"
-            class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none text-sm" />
-          <button type="button" id="togglePassword" class="absolute right-1 top-1/2 transform -translate-y-1/1 text-black">
-            <i class="fas fa-eye"></i>
-          </button>
-        </div>
-        <button type="submit" id="loginBtn"
+       <div class="relative">
+  <label for="password" class="block mb-1 text-black">Contraseña</label>
+  <input type="password" id="password" required placeholder="Tu contraseña"
+    class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none text-sm pr-10" />
+  <button type="button" id="togglePassword"
+    class="absolute right-1 top-1/2 -translate-y-1/1 p-1 text-black flex items-center justify-center">
+    <i class="fas fa-eye"></i>
+  </button>
+</div>
+ <button type="submit" id="loginBtn"
           class="w-full mt-4 bg-black text-[#e7ceb4] font-semibold py-2 rounded-lg hover:bg-gray-800 transition relative text-sm">
           Iniciar sesión
           <span id="loader" class="spinner absolute right-4 top-1/2 transform -translate-y-1/2 hidden"></span>
@@ -137,8 +138,12 @@
             alert("El correo electrónico no es válido.");
             break;
           default:
-            alert("Error al iniciar sesión: " + error.message);
-            break;
+  if (error.code === "auth/invalid-credential") {
+    alert("Correo o contraseña incorrectos. Intenta nuevamente.");
+  } else {
+    alert("Ocurrió un error al iniciar sesión. Intenta de nuevo más tarde.");
+  }
+  break;;
         }
       } finally {
         // Ocultar el loader y habilitar el botón
