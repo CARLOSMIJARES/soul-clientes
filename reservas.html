@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>reservas | SOUL Concept Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet">
   <style>
     body {
@@ -52,7 +49,7 @@
 
   <!-- USER INFO -->
   <section class="text-center mt-4">
-    <h2 class="text-lg text-black font-semibold">Bienvenida, <span id="nombreUsuario">Cliente</span></h2>
+    <h2 class="text-lg text-black font-semibold">Bienvenida, <span id="nombreUsuario">nombre</span></h2>
     <p class="text-black text-sm"><span id="emailUsuario">Email</span></p>
   </section>
 
@@ -221,186 +218,197 @@
     };
 
     // Actualiza total y tiempo
-    function actualizarTotal() {
-      let totalPrecio = 0;
-      let totalTiempo = 0;
-      const selects = serviciosContainer.querySelectorAll("select");
-      selects.forEach(select => {
-        if (select.value) {
-          const opcionSeleccionada = select.options[select.selectedIndex];
-          totalPrecio += Number(opcionSeleccionada.dataset.precio);
-          totalTiempo += Number(opcionSeleccionada.dataset.tiempo);
-        }
-      });
-      totalInfo.textContent = `Total: €${totalPrecio} | Duración: ${totalTiempo} min`;
-    }
+     function actualizarTotal() {
+    let total = 0;
+    let tiempo = 0;
 
-    // --- Horas Disponibles y lógica de selección ---
+    const selects = serviciosContainer.querySelectorAll("select");
 
-    const horasBase = [];
-    for(let h=9; h<=18; h++) {
-      horasBase.push(`${h.toString().padStart(2,'0')}:00`);
-      if(h < 18) horasBase.push(`${h.toString().padStart(2,'0')}:30`);
-    }
-
-    function horaAMinutos(hora) {
-      const [h, m] = hora.split(":").map(Number);
-      return h*60 + m;
-    }
-
-    function minutosAHora(min) {
-      const h = Math.floor(min / 60);
-      const m = min % 60;
-      return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
-    }
-
-    async function cargarHorasDisponibles() {
-      horasDisponiblesDiv.innerHTML = "";
-      horaSeleccionadaInput.value = "";
-
-      const fecha = fechaInput.value;
-      const manicurista = manicuristaSelect.value;
-
-      if (!fecha || !manicurista) {
-        return;
+    selects.forEach(select => {
+      const option = select.options[select.selectedIndex];
+      if (option && option.dataset.precio) {
+        total += parseFloat(option.dataset.precio);
+        tiempo += parseInt(option.dataset.tiempo);
       }
+    });
 
-      // Traer reservas de Firestore para fecha y manicurista
-      const snapshot = await db.collection("reservas")
-        .where("fecha", "==", fecha)
-        .where("manicurista", "==", manicurista)
-        .get();
+    totalInfo.textContent = `Total: €${total} | Duración: ${tiempo} min`;
+  }
 
-      const ocupados = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const inicioMin = horaAMinutos(data.hora);
-        const duracionMin = data.duracion || 30;
-        ocupados.push([inicioMin, inicioMin + duracionMin]);
-      });
+  // Mostrar nombre y email del usuario autenticado
+ auth.onAuthStateChanged(user => {
+  if (user) {
+    const uid = user.uid;
 
-      function estaLibre(inicio) {
-        const fin = inicio + 30;
-        return !ocupados.some(([occInicio, occFin]) => (inicio < occFin) && (fin > occInicio));
+    // Referencia al documento del cliente usando el UID
+    const clienteRef = db.collection("CLIENTES").doc(uid);
+
+    clienteRef.get().then(doc => {
+      if (doc.exists) {
+        const clienteData = doc.data();
+        const nombre = clienteData.nombre || "Nombre";
+        const apellido = clienteData.apellido || "Apellido";
+        const correo = clienteData.correo || user.email;
+
+        // Mostrar en el HTML
+        const nombreEl = document.getElementById("nombreUsuario");
+        const emailEl = document.getElementById("emailUsuario");
+
+        if (nombreEl) nombreEl.textContent = `${nombre} ${apellido}`;
+        if (emailEl) emailEl.textContent = correo;
+      } else {
+        console.error("No se encontró el documento del cliente en Firestore.");
       }
+    }).catch(error => {
+      console.error("Error al obtener los datos del cliente:", error);
+    });
+  } else {
+    // Redirige si no hay usuario autenticado
+    window.location.href = "login.html";
+  }
+});
 
-      horasBase.forEach(hora => {
-        const min = horaAMinutos(hora);
-        if (estaLibre(min)) {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.textContent = hora;
-          btn.className = "hora-boton";
 
+  // Cerrar modal
+  function cerrarModal() {
+    document.getElementById("resumenModal").classList.add("hidden");
+  }
+
+  // Escucha cambios de fecha y manicurista para cargar horas
+  fechaInput.addEventListener("change", cargarHorasDisponibles);
+  manicuristaSelect.addEventListener("change", cargarHorasDisponibles);
+
+function cargarHorasDisponibles() {
+  const fecha = fechaInput.value;
+  const manicurista = manicuristaSelect.value;
+
+  horasDisponiblesDiv.innerHTML = "";
+  horaSeleccionadaInput.value = "";
+
+  if (!fecha || !manicurista) return;
+
+  db.collection("reservas")
+    .where("fecha", "==", fecha)
+    .where("manicurista", "==", manicurista)
+    .get()
+    .then(snapshot => {
+      const horasReservadas = snapshot.docs.map(doc => doc.data().hora);
+
+      const horas = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+
+      horas.forEach(hora => {
+        const btn = document.createElement("div");
+        btn.textContent = hora;
+        btn.className = "hora-boton";
+
+        if (horasReservadas.includes(hora)) {
+          btn.classList.add("opacity-30", "pointer-events-none");
+        } else {
           btn.onclick = () => {
-            Array.from(horasDisponiblesDiv.children).forEach(b => b.classList.remove("selected"));
+            // Deseleccionar todas
+            document.querySelectorAll(".hora-boton").forEach(b => b.classList.remove("selected"));
+            // Seleccionar la pulsada
             btn.classList.add("selected");
+            // Guardar hora seleccionada
             horaSeleccionadaInput.value = hora;
           };
-
-          horasDisponiblesDiv.appendChild(btn);
         }
+
+        horasDisponiblesDiv.appendChild(btn);
       });
-    }
-
-    fechaInput.addEventListener("change", cargarHorasDisponibles);
-    manicuristaSelect.addEventListener("change", cargarHorasDisponibles);
-
-    // --- SUBMIT FORMULARIO ---
-
-    const formReserva = document.getElementById("formReserva");
-    const resumenModal = document.getElementById("resumenModal");
-    const resumenContenido = document.getElementById("resumenContenido");
-    const sonidoConfirmacion = document.getElementById("sonidoConfirmacion");
-
-    formReserva.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const nombre = document.getElementById("nombreUsuario").textContent || "Cliente";
-      const email = document.getElementById("emailUsuario").textContent || "cliente@correo.com";
-      const fecha = fechaInput.value;
-      const manicurista = manicuristaSelect.value;
-      const hora = horaSeleccionadaInput.value;
-
-      if (!fecha || !hora || !manicurista) {
-        return alert("Por favor, completa la fecha, manicurista y hora.");
-      }
-
-      // Servicios seleccionados
-      const selects = serviciosContainer.querySelectorAll("select");
-      let serviciosSeleccionados = [];
-      let totalPrecio = 0;
-      let totalTiempo = 0;
-
-      for (const select of selects) {
-        if (select.value) {
-          const opcion = servicios.find(s => s.nombre === select.value);
-          if (opcion) {
-            serviciosSeleccionados.push(opcion.nombre);
-            totalPrecio += opcion.precio;
-            totalTiempo += opcion.tiempo;
-          }
-        }
-      }
-
-      if (serviciosSeleccionados.length === 0) {
-        return alert("Debes seleccionar al menos un servicio.");
-      }
-
-      // Guardar reserva en Firestore
-      try {
-        await db.collection("reservas").add({
-            nombreusuario: nombre,
-          email: email,
-          fecha: fecha,
-          hora: hora,
-          manicurista: manicurista,
-          servicios: serviciosSeleccionados,
-          total: totalPrecio,
-          duracion: totalTiempo,
-          creado: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        resumenContenido.innerHTML = `
-          <strong>Fecha:</strong> ${fecha} <br/>
-          <strong>Hora:</strong> ${hora} <br/>
-          <strong>Manicurista:</strong> ${manicurista} <br/>
-          <strong>Servicios:</strong> ${serviciosSeleccionados.join(", ")} <br/>
-          <strong>Total:</strong> €${totalPrecio} <br/>
-          <strong>Duración:</strong> ${totalTiempo} min
-        `;
-
-        resumenModal.classList.remove("hidden");
-        sonidoConfirmacion.play();
-
-        // Reset form
-        formReserva.reset();
-        serviciosContainer.innerHTML = "";
-        crearSelectServicio();
-        totalInfo.textContent = "Total: €0 | Duración: 0 min";
-        horasDisponiblesDiv.innerHTML = "";
-        horaSeleccionadaInput.value = "";
-      } catch (error) {
-        alert("Error al guardar la reserva: " + error.message);
-      }
+    })
+    .catch(error => {
+      console.error("Error cargando horas:", error);
     });
+}
 
-    function cerrarModal() {
-      resumenModal.classList.add("hidden");
+// Manejar envío del formulario de reserva
+document.getElementById("formReserva").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Debes iniciar sesión para reservar.");
+    return;
+  }
+
+  const fecha = fechaInput.value;
+  const manicurista = manicuristaSelect.value;
+  const hora = horaSeleccionadaInput.value;
+
+  if (!fecha || !manicurista || !hora) {
+    alert("Por favor, completa fecha, manicurista y hora.");
+    return;
+  }
+
+  // Recopilar servicios seleccionados
+  const selectsServicios = serviciosContainer.querySelectorAll("select");
+  if (selectsServicios.length === 0) {
+    alert("Debes seleccionar al menos un servicio.");
+    return;
+  }
+
+  const serviciosSeleccionados = [];
+  let totalPrecio = 0;
+  let totalTiempo = 0;
+
+  for (const select of selectsServicios) {
+    const opcion = select.options[select.selectedIndex];
+    if (!opcion || opcion.value === "") {
+      alert("Por favor, selecciona todos los servicios correctamente.");
+      return;
     }
+    serviciosSeleccionados.push(opcion.value);
+    totalPrecio += parseFloat(opcion.dataset.precio);
+    totalTiempo += parseInt(opcion.dataset.tiempo);
+  }
 
-    // Simulación de usuario (puedes quitar o reemplazar con tu lógica real)
-    // Actualiza la UI con datos de usuario autenticado
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("nombreUsuario").textContent = user.displayName || "Cliente";
-        document.getElementById("emailUsuario").textContent = user.email || "cliente@correo.com";
-      } else {
-        document.getElementById("nombreUsuario").textContent = "Invitado";
-        document.getElementById("emailUsuario").textContent = "no-login";
-      }
-    });
-  </script>
+  // Crear objeto reserva
+  const reserva = {
+    uidCliente: user.uid,
+    cliente: document.getElementById("nombreUsuario").textContent,
+    correo: document.getElementById("emailUsuario").textContent,
+    fecha,
+    manicurista,
+    hora,
+    servicio: serviciosSeleccionados,
+    precio: totalPrecio,
+    duracion: totalTiempo,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    await db.collection("reservas").add(reserva);
+    // Mostrar modal con resumen
+    const resumenTexto = `
+    cliente: ${reserva.cliente}<br>
+      Correo: ${reserva.correo}<br>
+      Fecha: ${fecha}<br>
+      Manicurista: ${manicurista}<br>
+      Hora: ${hora}<br>
+      Servicios: ${serviciosSeleccionados.join(", ")}<br>
+      Total: €${totalPrecio} | Duración: ${totalTiempo} min
+    `;
+
+    document.getElementById("resumenContenido").innerHTML = resumenTexto;
+    document.getElementById("resumenModal").classList.remove("hidden");
+
+    // Reproducir sonido confirmación
+    document.getElementById("sonidoConfirmacion").play();
+
+    // Resetear formulario y actualizar horas para que se refleje la nueva reserva
+    e.target.reset();
+    serviciosContainer.innerHTML = "";
+    crearSelectServicio();
+    actualizarTotal();
+    cargarHorasDisponibles();
+
+  } catch (error) {
+    alert("Error al guardar la reserva. Inténtalo de nuevo.");
+    console.error("Error guardando reserva:", error);
+  }
+});
+</script>
 
 </body>
 </html>
