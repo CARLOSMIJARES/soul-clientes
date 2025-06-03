@@ -39,6 +39,7 @@
       color: #fff;
       font-weight: bold;
     }
+    
   </style>
 </head>
 <body class="min-h-screen relative">
@@ -274,79 +275,81 @@
     document.getElementById("resumenModal").classList.add("hidden");
   }
 
+  function generarHorasBloqueadas(reservas, intervalo = 15) {
+  const bloqueadas = new Set();
+
+  reservas.forEach(reserva => {
+    const [horaInicio, minutosInicio] = reserva.hora.split(':').map(Number);
+    const duracion = reserva.duracion || 0;
+
+    const inicio = new Date(0, 0, 0, horaInicio, minutosInicio);
+    const fin = new Date(inicio.getTime() + duracion * 60000);
+
+    let actual = new Date(inicio);
+
+    while (actual < fin) {
+      const horaStr = actual.toTimeString().slice(0, 5); // "HH:mm"
+      bloqueadas.add(horaStr);
+
+      actual.setMinutes(actual.getMinutes() + intervalo);
+    }
+  });
+
+  return bloqueadas;
+}
+
+function generarHorasDelDia(inicioStr, finStr, intervalo = 15) {
+  const resultado = [];
+  let [hInicio, mInicio] = inicioStr.split(":").map(Number);
+  let [hFin, mFin] = finStr.split(":").map(Number);
+  let start = new Date(0, 0, 0, hInicio, mInicio);
+  let end = new Date(0, 0, 0, hFin, mFin);
+
+  while (start < end) {
+    resultado.push(start.toTimeString().slice(0, 5)); // "HH:mm"
+    start.setMinutes(start.getMinutes() + intervalo);
+  }
+
+  return resultado;
+}
+
   // Escucha cambios de fecha y manicurista para cargar horas
   fechaInput.addEventListener("change", cargarHorasDisponibles);
   manicuristaSelect.addEventListener("change", cargarHorasDisponibles);
 
-  function cargarHorasDisponibles() {
+ async function cargarHorasDisponibles() {
   const fecha = fechaInput.value;
   const manicurista = manicuristaSelect.value;
-
-  horasDisponiblesDiv.innerHTML = "";
-  horaSeleccionadaInput.value = "";
-
   if (!fecha || !manicurista) return;
 
-  db.collection("reservas")
+  horasDisponiblesDiv.innerHTML = '';
+  horaSeleccionadaInput.value = '';
+
+  const snapshot = await db.collection("reservas")
     .where("fecha", "==", fecha)
     .where("manicurista", "==", manicurista)
-    .get()
-    .then(snapshot => {
-      const horasOcupadas = [];
+    .get();
 
-      snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const horaInicio = data.hora;
-        const servicio = data.servicio;
+  const reservas = snapshot.docs.map(doc => doc.data());
+  const horasBloqueadas = generarHorasBloqueadas(reservas);
 
-        // Buscar duración del servicio desde tu lista local
-        const duracionServicio = servicios.find(s => s.nombre === servicio)?.duracion || 60;
+  const horasDia = generarHorasDelDia("10:00", "18:30", 30); // 15 min intervalo
 
-        const [h, m] = horaInicio.split(":").map(Number);
-        const inicio = new Date(`${fecha}T${horaInicio}`);
-        const fin = new Date(inicio.getTime() + duracionServicio * 60000);
-
-        // Añadir rangos de 30 min ocupados
-        let current = new Date(inicio);
-        while (current < fin) {
-          const hora = `${current.getHours().toString().padStart(2, '0')}:${current.getMinutes().toString().padStart(2, '0')}`;
-          if (!horasOcupadas.includes(hora)) horasOcupadas.push(hora);
-          current = new Date(current.getTime() + 30 * 60000);
-        }
-      });
-
-      // Generar todas las horas posibles
-      const horas = [];
-      for (let h = 10; h < 18; h++) {
-        for (let m = 0; m < 60; m += 30) {
-          const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-          horas.push(hora);
-        }
-      }
-      horas.push("18:00");
-
-      horas.forEach(hora => {
-        const btn = document.createElement("div");
-        btn.textContent = hora;
-        btn.className = "hora-boton";
-
-        if (horasOcupadas.includes(hora)) {
-          btn.classList.add("opacity-30", "pointer-events-none");
-        } else {
-          btn.onclick = () => {
-            document.querySelectorAll(".hora-boton").forEach(b => b.classList.remove("selected"));
-            btn.classList.add("selected");
-            horaSeleccionadaInput.value = hora;
-          };
-        }
-
-        horasDisponiblesDiv.appendChild(btn);
-      });
-    })
-    .catch(error => {
-      console.error("Error cargando horas:", error);
-    });
+  horasDia.forEach(hora => {
+    if (!horasBloqueadas.has(hora)) {
+      const btn = document.createElement("div");
+      btn.textContent = hora;
+      btn.className = "hora-boton";
+      btn.onclick = () => {
+        document.querySelectorAll(".hora-boton").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        horaSeleccionadaInput.value = hora;
+      };
+      horasDisponiblesDiv.appendChild(btn);
+    }
+  });
 }
+
 
 
 // Manejar envío del formulario de reserva
@@ -435,6 +438,15 @@ document.getElementById("formReserva").addEventListener("submit", async e => {
     console.error("Error guardando reserva:", error);
   }
 });
+// Limpiar formulario después de guardar
+document.getElementById("formularioReserva").reset(); // si estás usando un <form>
+horaSeleccionadaInput.value = "";
+horasDisponiblesDiv.innerHTML = "";
+totalSpan.textContent = "0€";
+serviciosSelect.innerHTML = ""; // opcional si quieres reiniciar los servicios
+clienteSelect.selectedIndex = 0; // volver a seleccionar "elige un cliente"
+manicuristaSelect.selectedIndex = 0; // volver a seleccionar "elige un manicurista"
+
 </script>
 
 </body>
