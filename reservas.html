@@ -278,7 +278,7 @@
   fechaInput.addEventListener("change", cargarHorasDisponibles);
   manicuristaSelect.addEventListener("change", cargarHorasDisponibles);
 
-function cargarHorasDisponibles() {
+  function cargarHorasDisponibles() {
   const fecha = fechaInput.value;
   const manicurista = manicuristaSelect.value;
 
@@ -292,24 +292,50 @@ function cargarHorasDisponibles() {
     .where("manicurista", "==", manicurista)
     .get()
     .then(snapshot => {
-      const horasReservadas = snapshot.docs.map(doc => doc.data().hora);
+      const horasOcupadas = [];
 
-      const horas = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const horaInicio = data.hora;
+        const servicio = data.servicio;
+
+        // Buscar duración del servicio desde tu lista local
+        const duracionServicio = servicios.find(s => s.nombre === servicio)?.duracion || 60;
+
+        const [h, m] = horaInicio.split(":").map(Number);
+        const inicio = new Date(`${fecha}T${horaInicio}`);
+        const fin = new Date(inicio.getTime() + duracionServicio * 60000);
+
+        // Añadir rangos de 30 min ocupados
+        let current = new Date(inicio);
+        while (current < fin) {
+          const hora = `${current.getHours().toString().padStart(2, '0')}:${current.getMinutes().toString().padStart(2, '0')}`;
+          if (!horasOcupadas.includes(hora)) horasOcupadas.push(hora);
+          current = new Date(current.getTime() + 30 * 60000);
+        }
+      });
+
+      // Generar todas las horas posibles
+      const horas = [];
+      for (let h = 10; h < 18; h++) {
+        for (let m = 0; m < 60; m += 30) {
+          const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+          horas.push(hora);
+        }
+      }
+      horas.push("18:00");
 
       horas.forEach(hora => {
         const btn = document.createElement("div");
         btn.textContent = hora;
         btn.className = "hora-boton";
 
-        if (horasReservadas.includes(hora)) {
+        if (horasOcupadas.includes(hora)) {
           btn.classList.add("opacity-30", "pointer-events-none");
         } else {
           btn.onclick = () => {
-            // Deseleccionar todas
             document.querySelectorAll(".hora-boton").forEach(b => b.classList.remove("selected"));
-            // Seleccionar la pulsada
             btn.classList.add("selected");
-            // Guardar hora seleccionada
             horaSeleccionadaInput.value = hora;
           };
         }
@@ -321,6 +347,7 @@ function cargarHorasDisponibles() {
       console.error("Error cargando horas:", error);
     });
 }
+
 
 // Manejar envío del formulario de reserva
 document.getElementById("formReserva").addEventListener("submit", async e => {
