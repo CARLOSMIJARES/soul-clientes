@@ -1,0 +1,563 @@
+  <!DOCTYPE html>
+  <html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>pagina administrador | SOUL Concept Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Raleway', sans-serif;
+        background-color: #e7ceb4;
+        color: black;
+      }
+      .calendar {
+        width: 100%;
+        max-width: 300px;
+        background-color: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      }
+      .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        text-align: center;
+      }
+      .day {
+        padding: 8px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .day:hover {
+        background-color: #f4e0d1;
+      }
+      .selected {
+        background-color: #dabea3;
+        color: white;
+      }
+      .today {
+        border: 2px solid #dabea3;
+      }
+      table {
+        width: 100%;
+        max-width: 600px;
+        table-layout: fixed;
+        margin-top: 20px;
+        background-color: white;
+        border-collapse: collapse;
+        border-spacing: 0 10px;
+      }
+      th, td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: center;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+      }
+      th {
+        background-color: #dabaa3;
+        border-radius: 8px 8px 0 0;
+        padding: 8px;
+        text-align: center;
+        color: white;
+      }
+      td {
+        background-color: #fef6f0;
+        padding: 16px;
+        text-align: center;
+        border-radius: 12px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .columna-horas {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #f4e0d1;
+        border-radius: 8px;
+        padding: 4px 8px;
+        font-size: 0.85rem;
+      }
+      .hora-bloque {
+        font-size: 1rem;
+        font-weight: 700;
+        color: black;
+        text-align: center;
+        flex: 1;
+      }
+      .hora-minutos {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.7rem;
+        color: #555;
+        text-align: right;
+        flex: 0.5;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0; top: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 400px;
+        width: 90%;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen relative pb-20">
+  <header class="w-full h-[100px] sticky top-0 z-40 overflow-hidden bg-[#DABEA3] flex items-center justify-center">
+    <img src="logo.png" alt="SOUL Concept Studio" class="h-full object-contain" />
+  </header>
+
+  <main class="flex flex-col items-center px-4 mt-6 space-y-6">
+    <div class="calendar" id="calendar"></div>
+
+    <div class="flex flex-col items-center space-y-3 w-full max-w-[300px]">
+      <button onclick="window.location.href='clientes.html'"
+          class="bg-white border border-gray-300 hover:bg-[#f4e0d1] text-black font-semibold py-2 px-4 rounded-lg w-full">
+        Clientes
+      </button>
+      <a href="registrar_nuevo_cliente.html"
+        class="bg-white border border-gray-300 hover:bg-[#f4e0d1] text-black font-semibold py-2 px-4 rounded-lg w-full text-center block">
+        Registrar Nuevo Cliente
+      </a>
+      <a href="registrar_nueva_reserva.html"
+        class="bg-white border border-gray-300 hover:bg-[#f4e0d1] text-black font-semibold py-2 px-4 rounded-lg w-full text-center block">
+        Registrar Nueva Reserva
+      </a>
+    </div>
+
+    <table id="tabla-horarios">
+      <thead>
+        <tr>
+          <th style=>Hora</th>
+          <th style=>Norle</th>
+          <th style=>Dalia</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+<!-- MODAL INTEGRADO -->
+<div id="modalReserva" class="modal fixed inset-0 flex justify-center items-center bg-black/50 z-50 hidden">
+  <div class="modal-content bg-white p-6 rounded-lg shadow-lg relative w-full max-w-md">
+    <button onclick="cerrarModal()" class="absolute top-2 right-2 text-2xl text-gray-500 hover:text-gray-800">&times;</button>
+    <h2 class="font-bold text-lg mb-2">Detalles de la Reserva</h2>
+    <p id="detalleReserva"></p>
+
+    <!-- Botones de editar y eliminar -->
+    <div class="flex space-x-2 mt-3">
+      <button onclick="editarReserva()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Editar</button>
+      <button onclick="eliminarReserva()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Función para mostrar los detalles de la reserva en el modal
+  function mostrarDetallesReserva(reserva) {
+    // Mostrar los detalles en el modal
+    const detalleReserva = document.getElementById("detalleReserva");
+    detalleReserva.innerHTML = `
+      <strong>Cliente:</strong> ${reserva.cliente}<br>
+      <strong>Servicio:</strong> ${reserva.servicio}<br>
+      <strong>Duración:</strong> ${reserva.duracion} minutos<br>
+      <strong>Fecha:</strong> ${reserva.fecha}<br>
+      <strong>Hora:</strong> ${reserva.hora}<br>
+      <strong>Manicurista:</strong> ${reserva.manicurista}<br>
+      <strong>Precio:</strong> $${reserva.precio}
+    `;
+    
+    // Mostrar el modal
+    const modal = document.getElementById("modalReserva");
+    modal.style.display = "flex"; // Abrir el modal
+  }
+
+  // Función para cerrar el modal
+  function cerrarModal() {
+    const modal = document.getElementById("modalReserva");
+    modal.style.display = "none"; // Cerrar el modal
+  }
+
+  // Función para editar la reserva
+  function editarReserva() {
+    console.log("Editar reserva...");
+    // Aquí iría la lógica para editar la reserva
+  }
+
+  // Función para eliminar la reserva
+  function eliminarReserva() {
+    const confirmarEliminar = confirm("¿Estás seguro de que deseas eliminar esta reserva?");
+    if (confirmarEliminar) {
+      console.log("Reserva eliminada");
+      
+      // Lógica para eliminar la reserva de la base de datos (Firebase, etc.)
+      
+      // Después de eliminar, cerrar el modal
+      cerrarModal();
+    }
+  }
+</script>
+  <!-- MODAL DE EDICIÓN DE RESERVA -->
+  <div id="modalEditarReserva" class="modal">
+    <div class="modal-content">
+      <h2 class="font-bold text-lg mb-2">Editar Reserva</h2>
+      <form id="formEditarReserva">
+        <label class="block text-sm font-medium mb-1">Cliente:</label>
+        <input type="text" id="editCliente" class="border rounded w-full px-2 py-1 mb-2" required readonly>
+        
+        <!-- Select de Servicio -->
+        <label class="block text-sm font-medium mb-1">Servicio:</label>
+        <select id="editServicio" class="border rounded w-full px-2 py-1 mb-2" required>
+          <!-- Las opciones se agregarán dinámicamente con JavaScript -->
+        </select>
+        
+        <label class="block text-sm font-medium mb-1">Duración (min):</label>
+        <input type="number" id="editDuracion" class="border rounded w-full px-2 py-1 mb-2" required readonly>
+        
+        <label class="block text-sm font-medium mb-1">Fecha:</label>
+        <input type="date" id="editFecha" class="border rounded w-full px-2 py-1 mb-2" required>
+        
+        <label class="block text-sm font-medium mb-1">Hora:</label>
+        <input type="time" id="editHora" class="border rounded w-full px-2 py-1 mb-2" required>
+        
+        <label class="block text-sm font-medium mb-1">Manicurista:</label>
+        <select id="editManicurista" class="border rounded w-full px-2 py-1 mb-2" required>
+          <option value="Norle">Norle</option>
+          <option value="Dalia">Dalia</option>
+        </select>
+        
+        <label class="block text-sm font-medium mb-1">Precio:</label>
+        <input type="number" id="editPrecio" class="border rounded w-full px-2 py-1 mb-2" required readonly>
+        
+        <div class="flex space-x-2 mt-3">
+          <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Guardar</button>
+          <button type="button" onclick="cerrarModalEditar()" class="bg-[#dabaa3] hover:bg-[#c7aa94] text-white px-4 py-2 rounded">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Script para poblar el select de servicios y actualizar precio y duración -->
+  <script>
+    // Lista de servicios
+    const servicios = [
+      { nombre: "ACRILICO (LARGO 1-2)", precio: 30, tiempo: 115 },
+      { nombre: "ACRILICO (LARGO 3-4)", precio: 35, tiempo: 135 },
+      { nombre: "BABY BOOMER", precio: 35, tiempo: 115 },
+      { nombre: "CAPA FLEX (REFUERZO)", precio: 25, tiempo: 115 },
+      { nombre: "GEL (LARGO 1-2)", precio: 30, tiempo: 115 },
+      { nombre: "GEL (LARGO 3-4)", precio: 35, tiempo: 135 },
+      { nombre: "MANICURA EXPRESS", precio: 15, tiempo: 45 },
+      { nombre: "MANICURA SEMIPERMANENTE (CON RETIRO)", precio: 20, tiempo: 115 },
+      { nombre: "MANICURA SEMIPERMANENTE (PRIMERA PUESTA)", precio: 18, tiempo: 60 },
+      { nombre: "MANICURA TRADICIONAL (SIN ESMALTE)", precio: 10, tiempo: 30 },
+      { nombre: "PEDICURA (SOLO ESMALTE SEMIPERMANENTE)", precio: 18, tiempo: 60 },
+      { nombre: "PEDICURA (SOLO ESMALTE TRADICIONAL)", precio: 10, tiempo: 45 },
+      { nombre: "PEDICURA + (ESMALTE TRADICIONAL COMPLETO)", precio: 20, tiempo: 90 },
+      { nombre: "PEDICURA COMPLETA + (ESMALTE SEMIPERMANENTE)", precio: 28, tiempo: 135 },
+      { nombre: "PEDICURA TRADICIONAL (SIN ESMALTE)", precio: 18, tiempo: 60 },
+      { nombre: "RECONSTRUCCION UÑAS MORDIDAS", precio: 35, tiempo: 115 },
+      { nombre: "RETIRO ACRILICO", precio: 12, tiempo: 60 },
+      { nombre: "RETIRO GEL", precio: 12, tiempo: 60 },
+      { nombre: "RETIRO SEMIPERMANENTE", precio: 7, tiempo: 60 },
+      { nombre: "SOLO CORTAR UÑAS (MANOS)", precio: 5, tiempo: 30 },
+      { nombre: "SOLO CORTAR UÑAS (PIES)", precio: 5, tiempo: 30 },
+      { nombre: "UÑA ROTA (MANOS)", precio: 2, tiempo: 15 },
+      { nombre: "UÑA ROTA (PIES)", precio: 3, tiempo: 15 },
+      { nombre: "UÑAS ENCARNADAS", precio: 2, tiempo: 5 }
+    ];
+
+    // Función para poblar el select de servicios
+    function poblarServicios() {
+      const selectServicio = document.getElementById("editServicio");
+      servicios.forEach(servicio => {
+        const option = document.createElement("option");
+        option.value = servicio.nombre;
+        option.textContent = servicio.nombre;
+        selectServicio.appendChild(option);
+      });
+    }
+
+    // Función para actualizar el precio y la duración al seleccionar un servicio
+    function actualizarPrecioYDuracion() {
+      const selectServicio = document.getElementById("editServicio");
+      const precioInput = document.getElementById("editPrecio");
+      const duracionInput = document.getElementById("editDuracion");
+
+      const servicioSeleccionado = servicios.find(servicio => servicio.nombre === selectServicio.value);
+      if (servicioSeleccionado) {
+        precioInput.value = servicioSeleccionado.precio;
+        duracionInput.value = servicioSeleccionado.tiempo;
+      }
+    }
+
+    // Llamar a la función para poblar los servicios al cargar la página
+    document.addEventListener("DOMContentLoaded", () => {
+      poblarServicios();
+
+      // Añadir el evento para actualizar el precio y duración al seleccionar un servicio
+      const selectServicio = document.getElementById("editServicio");
+      selectServicio.addEventListener("change", actualizarPrecioYDuracion);
+    });
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, collection, query, where, onSnapshot, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+apiKey: "AIzaSyA5SMx7IhbjmDw8TjGavDYdwSpx37OthQw",
+  authDomain: "soulconceptstudioficcial.firebaseapp.com",
+  projectId: "soulconceptstudioficcial",
+  storageBucket: "soulconceptstudioficcial.firebasestorage.app",
+  messagingSenderId: "55591952377",
+  appId: "1:55591952377:web:532d6b13a0a9cc5b456728",
+  measurementId: "G-QJEM0QHH7N"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let reservaSeleccionada = null;
+
+    const tablaHorarios = document.getElementById("tabla-horarios").getElementsByTagName("tbody")[0];
+    const bloquesHora = [];
+    for (let h = 8; h <= 21; h++) {
+      const hora = h.toString().padStart(2, '0');
+      bloquesHora.push(hora);
+    }
+
+    bloquesHora.forEach(horaBase => {
+      const minutos = ["00", "15", "30", "45"];
+      minutos.forEach((minuto, idx) => {
+        const horaCompleta = `${horaBase}:${minuto}`;
+        const fila = document.createElement("tr");
+        if (idx === 0) {
+          fila.innerHTML = `
+            <td rowspan="4">
+              <div class="columna-horas">
+                <div class="hora-bloque">${horaBase}</div>
+                <div class="hora-minutos">
+                  <div>00</div><div>15</div><div>30</div><div>45</div>
+                </div>
+              </div>
+            </td>
+            <td id="Norle-${horaCompleta}"></td>
+            <td id="Dalia-${horaCompleta}"></td>
+          `;
+        } else {
+          fila.innerHTML = `
+            <td id="Norle-${horaCompleta}"></td>
+            <td id="Dalia-${horaCompleta}"></td>
+          `;
+        }
+        tablaHorarios.appendChild(fila);
+      });
+    });
+
+    function cargarReservas(fecha) {
+      const reservasRef = collection(db, "reservas");
+      const q = query(reservasRef, where("fecha", "==", fecha));
+
+      onSnapshot(q, (snapshot) => {
+        bloquesHora.forEach(horaBase => {
+          ["00", "15", "30", "45"].forEach(minuto => {
+            ["Norle", "Dalia"].forEach(manicurista => {
+              const id = `${manicurista}-${horaBase}:${minuto}`;
+              const celda = document.getElementById(id);
+              if (celda) {
+                celda.textContent = "";
+                celda.style.backgroundColor = "";
+                celda.style.display = "";
+                celda.rowSpan = 1;
+                celda.onclick = null;
+              }
+            });
+          });
+        });
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const { manicurista, hora, duracion, cliente, servicio, precio } = data;
+          const [horaBase, minutoBase] = hora.split(":").map(Number);
+          const totalBloques = Math.ceil(duracion / 15);
+
+          let minutosTotales = minutoBase;
+          let horaActual = horaBase;
+          for (let i = 0; i < totalBloques; i++) {
+            const minutos = minutosTotales + i * 15;
+            const horaBloque = horaBase + Math.floor(minutos / 60);
+            const minutoBloque = minutos % 60;
+            const id = `${manicurista}-${horaBloque.toString().padStart(2, '0')}:${minutoBloque.toString().padStart(2, '0')}`;
+            const celda = document.getElementById(id);
+            if (celda) {
+              if (i === 0) {
+                celda.innerHTML = `<div><strong>${cliente}</strong></div><div>${servicio}</div>`;
+                celda.style.backgroundColor = "#dabea3";
+                celda.rowSpan = totalBloques;
+                celda.onclick = () => mostrarDetalleReserva({...data, id: doc.id});
+              } else {
+                celda.style.display = "none";
+              }
+            }
+          }
+        });
+      });
+    }
+
+    function mostrarDetalleReserva(data) {
+      reservaSeleccionada = data;
+      const detalle = `
+        <strong>Cliente:</strong> ${data.cliente}<br>
+        <strong>Servicio:</strong> ${data.servicio}<br>
+        <strong>Duración:</strong> ${data.duracion} minutos<br>
+        <strong>Fecha:</strong> ${data.fecha}<br>
+        <strong>Hora:</strong> ${data.hora}<br>
+        <strong>Manicurista:</strong> ${data.manicurista}<br>
+        <strong>Precio:</strong> $${data.precio}
+      `;
+      document.getElementById("detalleReserva").innerHTML = detalle;
+      document.getElementById("modalReserva").style.display = "flex";
+    }
+
+  window.editarReserva = function() {
+    if (reservaSeleccionada) {
+      // Mostrar datos en el formulario
+      document.getElementById('editCliente').value = reservaSeleccionada.cliente;
+      document.getElementById('editServicio').value = reservaSeleccionada.servicio;
+      document.getElementById('editDuracion').value = reservaSeleccionada.duracion;
+      document.getElementById('editFecha').value = reservaSeleccionada.fecha;
+      document.getElementById('editHora').value = reservaSeleccionada.hora;
+      document.getElementById('editManicurista').value = reservaSeleccionada.manicurista;
+      document.getElementById('editPrecio').value = reservaSeleccionada.precio;
+      document.getElementById('modalEditarReserva').style.display = 'flex';
+    }
+  };
+
+  document.getElementById('formEditarReserva').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (reservaSeleccionada) {
+      const nuevaReserva = {
+        cliente: document.getElementById('editCliente').value,
+        servicio: document.getElementById('editServicio').value,
+        duracion: parseInt(document.getElementById('editDuracion').value),
+        fecha: document.getElementById('editFecha').value,
+        hora: document.getElementById('editHora').value,
+        manicurista: document.getElementById('editManicurista').value,
+        precio: parseFloat(document.getElementById('editPrecio').value)
+      };
+      try {
+        const reservaRef = doc(db, "reservas", reservaSeleccionada.id);
+        await updateDoc(reservaRef, nuevaReserva);
+        cerrarModalEditar();
+        cerrarModal(); // También cerramos el modal anterior
+        alert("Reserva actualizada exitosamente.");
+      } catch (error) {
+        console.error("Error al actualizar la reserva: ", error);
+        alert("Error al actualizar la reserva.");
+      }
+    }
+  });
+
+  window.cerrarModalEditar = function() {
+    document.getElementById('modalEditarReserva').style.display = 'none';
+  };
+
+    window.eliminarReserva = async function() {
+      if (reservaSeleccionada) {
+        if (confirm("¿Estás seguro de que deseas eliminar esta reserva?")) {
+          await deleteDoc(doc(db, "reservas", reservaSeleccionada.id));
+          cerrarModal();
+        }
+      }
+    }
+
+    window.cerrarModal = function() {
+      document.getElementById("modalReserva").style.display = "none";
+    }
+
+    const calendarEl = document.getElementById("calendar");
+    const daysShort = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+    const todayDate = new Date();
+    let currentMonth = todayDate.getMonth();
+    let currentYear = todayDate.getFullYear();
+
+    function renderCalendar(month, year) {
+      const firstDay = new Date(year, month).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      let html = `
+        <div class="calendar-header">
+          <button onclick="prevMonth()">←</button>
+          <span class="font-medium capitalize">${new Date(year, month).toLocaleString('es-ES', { month: 'long' })} ${year}</span>
+          <button onclick="nextMonth()">→</button>
+        </div>
+        <div class="calendar-grid font-medium text-sm text-gray-700">
+          ${daysShort.map(d => `<div>${d}</div>`).join('')}
+      `;
+      let date = 1;
+      for (let i = 0; i < 6; i++) {
+        for (let j = 0; j < 7; j++) {
+          if (i === 0 && j < firstDay) {
+            html += `<div></div>`;
+          } else if (date > daysInMonth) {
+            break;
+          } else {
+            const isToday = date === todayDate.getDate() && month === todayDate.getMonth() && year === todayDate.getFullYear();
+            html += `<div class="day ${isToday ? 'today selected' : ''}" onclick="selectDate(${date}, ${month}, ${year}, this)">${date}</div>`;
+            date++;
+          }
+        }
+      }
+      html += `</div>`;
+      calendarEl.innerHTML = html;
+      const fechaHoy = `${year}-${(month+1).toString().padStart(2, '0')}-${todayDate.getDate().toString().padStart(2, '0')}`;
+      cargarReservas(fechaHoy);
+    }
+
+    window.selectDate = function(day, month, year, el) {
+      document.querySelectorAll(".day").forEach(d => d.classList.remove("selected"));
+      el.classList.add("selected");
+      const fechaSeleccionada = `${year}-${(month+1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      cargarReservas(fechaSeleccionada);
+    }
+
+    window.prevMonth = function() {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      renderCalendar(currentMonth, currentYear);
+    }
+
+    window.nextMonth = function() {
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      renderCalendar(currentMonth, currentYear);
+    }
+
+    renderCalendar(currentMonth, currentYear);
+  </script>
+  </body>
+  </html>
