@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>reservas | SOUL Concept Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Raleway', sans-serif;
+      background-color: #e7ceb4;
+      color: white;
+    }
+    #resumenModal {
+      animation: aparecer 0.4s ease-out forwards;
+    }
+    @keyframes aparecer {
+      0% { transform: scale(0.8); opacity: 0; filter: brightness(0.8); }
+      100% { transform: scale(1); opacity: 1; filter: brightness(1.2); }
+    }
+    .hora-boton {
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background-color: #fff;
+      color: #000;
+      text-align: center;
+      user-select: none;
+      transition: background-color 0.2s, color 0.2s;
+      font-size: 0.8rem;
+    }
+    .hora-boton:hover {
+      background-color: #000;
+      color: #fff;
+    }
+    .hora-boton.selected {
+      background-color: #000;
+      color: #fff;
+      font-weight: bold;
+    }
+    
+  </style>
+</head>
+<body class="min-h-screen relative">
+
+  <!-- HEADER -->
+  <header class="w-full h-[100px] sticky top-0 z-40 bg-[#DABEA3] flex items-center justify-center px-4">
+    <img src="logo.png" alt="SOUL Concept Studio" class="h-16 object-contain" />
+  </header>
+
+  <!-- USER INFO -->
+  <section class="text-center mt-4 px-4">
+    <h2 class="text-base md:text-lg text-black font-semibold">Bienvenida, <span id="nombreUsuario">nombre</span></h2>
+    <p class="text-black text-xs md:text-sm break-words"><span id="emailUsuario">Email</span></p>
+  </section>
+
+  <!-- RESERVA FORM -->
+  <main class="flex justify-center items-start mt-4 px-4 pb-8">
+    <div class="bg-white/20 backdrop-blur-md border border-black/20 rounded-xl p-4 shadow-xl w-full max-w-md">
+      <h2 class="text-xl md:text-2xl font-semibold text-center mb-4 text-black">Reserva tu cita</h2>
+
+      <form class="space-y-4" id="formReserva">
+        <!-- Fecha -->
+        <div>
+          <label class="block mb-1 text-black text-sm">Fecha</label>
+          <input id="fechaCita" type="date" class="w-full p-2 rounded-lg bg-black/20 text-black text-sm" required min="" />
+        </div>
+
+        <!-- Manicurista -->
+        <div>
+          <label for="manicuristaSelect" class="block mb-1 text-black text-sm">Selecciona manicurista</label>
+          <select id="manicuristaSelect" class="w-full p-2 rounded-lg bg-black/20 text-black text-sm" required>
+            <option value="" disabled selected>Selecciona tu manicurista</option>
+            <option value="Norle">Norle</option>
+            <option value="Dalia">Dalia</option>
+          </select>
+        </div>
+
+        <!-- Horas disponibles -->
+        <div>
+          <label class="block mb-1 text-black text-sm">Selecciona hora</label>
+          <div id="horasDisponibles" class="grid grid-cols-4 gap-1 p-2 rounded-lg bg-black/20 text-black max-h-40 overflow-y-auto"></div>
+          <input type="hidden" id="horaSeleccionada" name="horaSeleccionada" required />
+        </div>
+
+        <!-- Servicios -->
+        <div id="serviciosContainer" class="space-y-2"></div>
+        <button type="button" id="agregarServicioBtn" class="w-full bg-white/30 text-black py-2 rounded-lg hover:bg-white/50 text-sm transition">➕ Agregar servicio</button>
+
+        <div id="totalInfo" class="text-black text-xs md:text-sm mt-2">Total: €0 | Duración: 0 min</div>
+
+        <button type="submit" class="w-full mt-4 bg-black text-white py-2 rounded-lg hover:bg-white hover:text-black transition text-sm md:text-base">Reservar</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- MODAL -->
+  <div id="resumenModal" class="fixed inset-0 bg-black/60 flex items-center justify-center hidden z-50 px-4">
+    <div class="bg-white text-black rounded-2xl p-6 w-full max-w-xs text-center shadow-2xl">
+      <h3 class="text-lg font-bold mb-4">¡Reserva Confirmada!</h3>
+      <p id="resumenContenido" class="text-xs mb-4"></p>
+      <button onclick="cerrarModal()" class="mt-2 px-6 py-2 bg-black text-white rounded-lg hover:bg-white hover:text-black transition text-sm">Aceptar</button>
+    </div>
+  </div>
+
+  <audio id="sonidoConfirmacion" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_b0a20838a3.mp3" preload="auto"></audio>
+  <!-- FIREBASE CONFIG -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+  <!-- FIREBASE CONFIG SCRIPT -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5SMx7IhbjmDw8TjGavDYdwSpx37OthQw",
+  authDomain: "soulconceptstudioficcial.firebaseapp.com",
+  projectId: "soulconceptstudioficcial",
+  storageBucket: "soulconceptstudioficcial.firebasestorage.app",
+  messagingSenderId: "55591952377",
+  appId: "1:55591952377:web:532d6b13a0a9cc5b456728",
+  measurementId: "G-QJEM0QHH7N"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
+
+  <!-- LOGICA JS -->
+  <script>
+    const servicios = [
+      { nombre: "ACRILICO (LARGO 1-2)", precio: 30, tiempo: 120 },
+      { nombre: "ACRILICO (LARGO 3-4)", precio: 35, tiempo: 135 },
+      { nombre: "BABY BOOMER", precio: 35, tiempo: 120 },
+      { nombre: "CAPA FLEX (REFUERZO)", precio: 25, tiempo: 120 },
+      { nombre: "GEL (LARGO 1-2)", precio: 30, tiempo: 120 },
+      { nombre: "GEL (LARGO 3-4)", precio: 35, tiempo: 135 },
+      { nombre: "MANICURA EXPRESS", precio: 15, tiempo: 45 },
+      { nombre: "MANICURA SEMIPERMANENTE (CON RETIRO)", precio: 20, tiempo: 120 },
+      { nombre: "MANICURA SEMIPERMANENTE (PRIMERA PUESTA)", precio: 18, tiempo: 60 },
+      { nombre: "MANICURA TRADICIONAL (SIN ESMALTE)", precio: 10, tiempo: 30 },
+      { nombre: "PEDICURA (SOLO ESMALTE SEMIPERMANENTE)", precio: 18, tiempo: 60 },
+      { nombre: "PEDICURA (SOLO ESMALTE TRADICIONAL)", precio: 10, tiempo: 45 },
+      { nombre: "PEDICURA + (ESMALTE TRADICIONAL COMPLETO)", precio: 20, tiempo: 90 },
+      { nombre: "PEDICURA COMPLETA + (ESMALTE SEMIPERMANENTE)", precio: 28, tiempo: 135 },
+      { nombre: "PEDICURA TRADICIONAL (SIN ESMALTE)", precio: 18, tiempo: 60 },
+      { nombre: "RECONSTRUCCION UÑAS MORDIDAS", precio: 35, tiempo: 120 },
+      { nombre: "RETIRO ACRILICO", precio: 12, tiempo: 60 },
+      { nombre: "RETIRO GEL", precio: 12, tiempo: 60 },
+      { nombre: "RETIRO SEMIPERMANENTE", precio: 7, tiempo: 60 },
+      { nombre: "SOLO CORTAR UÑAS (MANOS)", precio: 5, tiempo: 20 },
+      { nombre: "SOLO CORTAR UÑAS (PIES)", precio: 5, tiempo: 30 },
+      { nombre: "UÑA ROTA (MANOS)", precio: 2, tiempo: 15 },
+      { nombre: "UÑA ROTA (PIES)", precio: 3, tiempo: 15 },
+      { nombre: "UÑAS ENCARNADAS", precio: 2, tiempo: 5 }
+    ];
+
+    const serviciosContainer = document.getElementById("serviciosContainer");
+    const agregarBtn = document.getElementById("agregarServicioBtn");
+    const totalInfo = document.getElementById("totalInfo");
+    const fechaInput = document.getElementById("fechaCita");
+    const manicuristaSelect = document.getElementById("manicuristaSelect");
+    const horasDisponiblesDiv = document.getElementById("horasDisponibles");
+    const horaSeleccionadaInput = document.getElementById("horaSeleccionada");
+
+    // Set min date to today
+    const hoy = new Date().toISOString().split("T")[0];
+    fechaInput.setAttribute("min", hoy);
+
+    // Crear select de servicios dinámicamente
+    function crearSelectServicio() {
+      const wrapper = document.createElement("div");
+      wrapper.className = "mb-2 flex items-center gap-2";
+
+      const select = document.createElement("select");
+      select.className = "w-full p-2 rounded-lg bg-black/20 text-black";
+      select.required = true;
+
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "Selecciona un servicio";
+      defaultOption.disabled = true;
+      defaultOption.selected = true;
+      select.appendChild(defaultOption);
+
+      servicios.forEach(s => {
+        const option = document.createElement("option");
+        option.value = s.nombre;
+        option.textContent = `${s.nombre} - €${s.precio} - ${s.tiempo} min`;
+        option.dataset.precio = s.precio;
+        option.dataset.tiempo = s.tiempo;
+        select.appendChild(option);
+      });
+
+      // Botón para eliminar este servicio
+      const eliminarBtn = document.createElement("button");
+      eliminarBtn.type = "button";
+      eliminarBtn.textContent = "❌";
+      eliminarBtn.title = "Eliminar servicio";
+      eliminarBtn.className = "text-black bg-red-400 rounded px-2 hover:bg-red-600 transition";
+
+      eliminarBtn.onclick = () => {
+        wrapper.remove();
+        actualizarTotal();
+      };
+
+      select.onchange = actualizarTotal;
+
+      wrapper.appendChild(select);
+      wrapper.appendChild(eliminarBtn);
+      serviciosContainer.appendChild(wrapper);
+    }
+
+    // Agregar el primer servicio al cargar
+    crearSelectServicio();
+
+    agregarBtn.onclick = () => {
+      crearSelectServicio();
+    };
+
+    // Actualiza total y tiempo
+     function actualizarTotal() {
+    let total = 0;
+    let tiempo = 0;
+
+    const selects = serviciosContainer.querySelectorAll("select");
+
+    selects.forEach(select => {
+      const option = select.options[select.selectedIndex];
+      if (option && option.dataset.precio) {
+        total += parseFloat(option.dataset.precio);
+        tiempo += parseInt(option.dataset.tiempo);
+      }
+    });
+
+    totalInfo.textContent = `Total: €${total} | Duración: ${tiempo} min`;
+  }
+
+  // Mostrar nombre y email del usuario autenticado
+ auth.onAuthStateChanged(user => {
+  if (user) {
+    const uid = user.uid;
+
+    // Referencia al documento del cliente usando el UID
+    const clienteRef = db.collection("CLIENTES").doc(uid);
+
+    clienteRef.get().then(doc => {
+      if (doc.exists) {
+        const clienteData = doc.data();
+        const nombre = clienteData.nombre || "Nombre";
+        const apellido = clienteData.apellido || "Apellido";
+        const correo = clienteData.correo || user.email;
+
+        // Mostrar en el HTML
+        const nombreEl = document.getElementById("nombreUsuario");
+        const emailEl = document.getElementById("emailUsuario");
+
+        if (nombreEl) nombreEl.textContent = `${nombre} ${apellido}`;
+        if (emailEl) emailEl.textContent = correo;
+      } else {
+        console.error("No se encontró el documento del cliente en Firestore.");
+      }
+    }).catch(error => {
+      console.error("Error al obtener los datos del cliente:", error);
+    });
+  } else {
+    // Redirige si no hay usuario autenticado
+    window.location.href = "index.html";
+  }
+});
+  function generarHorasBloqueadas(reservas, intervalo = 15) {
+  const bloqueadas = new Set();
+
+  reservas.forEach(reserva => {
+    const [horaInicio, minutosInicio] = reserva.hora.split(':').map(Number);
+    const duracion = reserva.duracion || 0;
+
+    const inicio = new Date(0, 0, 0, horaInicio, minutosInicio);
+    const fin = new Date(inicio.getTime() + duracion * 60000);
+
+    let actual = new Date(inicio);
+
+    while (actual < fin) {
+      const horaStr = actual.toTimeString().slice(0, 5); // "HH:mm"
+      bloqueadas.add(horaStr);
+
+      actual.setMinutes(actual.getMinutes() + intervalo);
+    }
+  });
+
+  return bloqueadas;
+}
+
+function generarHorasDelDia(inicioStr, finStr, intervalo = 15) {
+  const resultado = [];
+  let [hInicio, mInicio] = inicioStr.split(":").map(Number);
+  let [hFin, mFin] = finStr.split(":").map(Number);
+  let start = new Date(0, 0, 0, hInicio, mInicio);
+  let end = new Date(0, 0, 0, hFin, mFin);
+
+  while (start < end) {
+    resultado.push(start.toTimeString().slice(0, 5)); // "HH:mm"
+    start.setMinutes(start.getMinutes() + intervalo);
+  }
+
+  return resultado;
+}
+
+  // Escucha cambios de fecha y manicurista para cargar horas
+ fechaInput.addEventListener("change", () => {
+  const fecha = new Date(fechaInput.value);
+  const diaSemana = fecha.getDay(); // 0 = domingo, 1 = lunes, ...
+  if (diaSemana === 0) {
+    alert("No se permiten reservas los domingos. Por favor, selecciona otro día.");
+    fechaInput.value = ""; // limpia la selección
+  } else {
+    // Si quieres hacer algo al seleccionar un día válido, aquí
+  }
+});
+  manicuristaSelect.addEventListener("change", cargarHorasDisponibles);
+
+async function cargarHorasDisponibles() {
+  const fecha = fechaInput.value;
+  const manicurista = manicuristaSelect.value;
+  if (!fecha || !manicurista) return;
+
+  horasDisponiblesDiv.innerHTML = '';
+  horaSeleccionadaInput.value = '';
+
+  const snapshot = await db.collection("reservas")
+    .where("fecha", "==", fecha)
+    .where("manicurista", "==", manicurista)
+    .get();
+
+  const reservas = snapshot.docs.map(doc => doc.data());
+  const horasBloqueadas = generarHorasBloqueadas(reservas);
+
+  const horasDia = generarHorasDelDia("10:00", "18:30", 30); // 30 min intervalo
+
+  // Si no hay reservas, habilitar todas las horas
+  if (reservas.length === 0) {
+    horasDia.forEach(hora => {
+      const btn = document.createElement("div");
+      btn.textContent = hora;
+      btn.className = "hora-boton";
+      btn.onclick = () => {
+        // Eliminar la selección de hora anterior
+        document.querySelectorAll(".hora-boton").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        horaSeleccionadaInput.value = hora;
+
+        // Habilitar todos los servicios si no hay reservas
+        habilitarTodosLosServicios();
+      };
+      horasDisponiblesDiv.appendChild(btn);
+    });
+  } else {
+    // Si hay reservas, mostrar solo las horas disponibles
+    horasDia.forEach(hora => {
+      if (!horasBloqueadas.has(hora)) {
+        const btn = document.createElement("div");
+        btn.textContent = hora;
+        btn.className = "hora-boton";
+        btn.onclick = () => {
+          // Eliminar la selección de hora anterior
+          document.querySelectorAll(".hora-boton").forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          horaSeleccionadaInput.value = hora;
+
+          // Habilitar los servicios según la hora seleccionada
+          actualizarServiciosSegunHoraSeleccionada(hora);
+        };
+        horasDisponiblesDiv.appendChild(btn);
+      }
+    });
+  }
+}
+
+function habilitarTodosLosServicios() {
+  const selectsServicios = serviciosContainer.querySelectorAll("select");
+
+  selectsServicios.forEach(select => {
+    const opciones = select.querySelectorAll("option");
+    opciones.forEach(option => {
+      option.disabled = false; // Habilitar todos los servicios
+    });
+  });
+}
+
+function actualizarServiciosSegunHoraSeleccionada(horaSeleccionada) {
+  const selectsServicios = serviciosContainer.querySelectorAll("select");
+
+  // Convertir la hora seleccionada a un objeto Date
+  const [hora, minutos] = horaSeleccionada.split(":").map(Number);
+  const horaInicio = new Date(0, 0, 0, hora, minutos);
+
+  // Obtener las reservas para calcular el tiempo disponible
+  const fecha = fechaInput.value;
+  const manicurista = manicuristaSelect.value;
+  if (!fecha || !manicurista) return;
+
+  db.collection("reservas")
+    .where("fecha", "==", fecha)
+    .where("manicurista", "==", manicurista)
+    .get()
+    .then(snapshot => {
+      const reservas = snapshot.docs.map(doc => doc.data());
+
+      // Obtener la próxima reserva
+      let horaFinDisponible = new Date(0, 0, 0, 23, 59); // Por defecto, el final del día
+      for (let reserva of reservas) {
+        const horaReserva = reserva.hora; // Supón que `hora` es un campo en formato 'HH:mm'
+        const [horaReservaH, horaReservaM] = horaReserva.split(":").map(Number);
+        const horaReservaDate = new Date(0, 0, 0, horaReservaH, horaReservaM);
+
+        // Si la hora seleccionada es antes de una reserva, limitamos el tiempo disponible
+        if (horaInicio < horaReservaDate) {
+          horaFinDisponible = new Date(horaReservaDate);
+        }
+      }
+
+      // Actualizar los servicios según el tiempo disponible
+      selectsServicios.forEach(select => {
+        const opciones = select.querySelectorAll("option");
+        opciones.forEach(option => {
+          const duracionServicio = parseInt(option.dataset.tiempo);
+
+          // Verificar si el servicio cabe en el tiempo disponible
+          if (horaFinDisponible.getTime() - horaInicio.getTime() < duracionServicio * 60000) {
+            option.disabled = true; // Deshabilitar el servicio
+          } else {
+            option.disabled = false; // Habilitar el servicio
+          }
+        });
+      });
+    });
+}
+
+
+
+// Manejar envío del formulario de reserva
+document.getElementById("formReserva").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Debes iniciar sesión para reservar.");
+    return;
+  }
+
+  const fecha = fechaInput.value;
+  const manicurista = manicuristaSelect.value;
+  const hora = horaSeleccionadaInput.value;
+
+  if (!fecha || !manicurista || !hora) {
+    alert("Por favor, completa fecha, manicurista y hora.");
+    return;
+  }
+
+  // Recopilar servicios seleccionados
+  const selectsServicios = serviciosContainer.querySelectorAll("select");
+  if (selectsServicios.length === 0) {
+    alert("Debes seleccionar al menos un servicio.");
+    return;
+  }
+
+  const serviciosSeleccionados = [];
+  let totalPrecio = 0;
+  let totalTiempo = 0;
+
+  for (const select of selectsServicios) {
+    const opcion = select.options[select.selectedIndex];
+    if (!opcion || opcion.value === "") {
+      alert("Por favor, selecciona todos los servicios correctamente.");
+      return;
+    }
+    serviciosSeleccionados.push(opcion.value);
+    totalPrecio += parseFloat(opcion.dataset.precio);
+    totalTiempo += parseInt(opcion.dataset.tiempo);
+  }
+
+  // Crear objeto reserva
+  const reserva = {
+    uidCliente: user.uid,
+    cliente: document.getElementById("nombreUsuario").textContent,
+    correo: document.getElementById("emailUsuario").textContent,
+    fecha,
+    manicurista,
+    hora,
+    servicio: serviciosSeleccionados,
+    precio: totalPrecio,
+    duracion: totalTiempo,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    await db.collection("reservas").add(reserva);
+    // Mostrar modal con resumen
+    const resumenTexto = `
+    cliente: ${reserva.cliente}<br>
+      Correo: ${reserva.correo}<br>
+      Fecha: ${fecha}<br>
+      Manicurista: ${manicurista}<br>
+      Hora: ${hora}<br>
+      Servicios: ${serviciosSeleccionados.join(", ")}<br>
+      Total: €${totalPrecio} | Duración: ${totalTiempo} min
+    `;
+
+    document.getElementById("resumenContenido").innerHTML = resumenTexto;
+    document.getElementById("resumenModal").classList.remove("hidden");
+
+    // Reproducir sonido confirmación
+    document.getElementById("sonidoConfirmacion").play();
+
+    // Resetear formulario y actualizar horas para que se refleje la nueva reserva
+    e.target.reset();
+    serviciosContainer.innerHTML = "";
+    crearSelectServicio();
+    actualizarTotal();
+    cargarHorasDisponibles();
+
+  } catch (error) {
+    alert("Error al guardar la reserva. Inténtalo de nuevo.");
+    console.error("Error guardando reserva:", error);
+  }
+});
+// Limpiar formulario después de guardar
+document.getElementById("formularioReserva").reset(); // si estás usando un <form>
+horaSeleccionadaInput.value = "";
+horasDisponiblesDiv.innerHTML = "";
+totalSpan.textContent = "0€";
+serviciosSelect.innerHTML = ""; // opcional si quieres reiniciar los servicios
+clienteSelect.selectedIndex = 0; // volver a seleccionar "elige un cliente"
+manicuristaSelect.selectedIndex = 0; // volver a seleccionar "elige un manicurista"
+
+
+  // Cerrar modal
+ function cerrarModal() {
+  document.getElementById("resumenModal").classList.add("hidden");
+
+  // Desloguear al usuario
+  firebase.auth().signOut()
+    .then(() => {
+      console.log("Usuario deslogueado.");
+      // Redirigir a login o actualizar UI
+      window.location.href = "/index.html"; // Cambia la ruta según tu proyecto
+    })
+    .catch((error) => {
+      console.error("Error al desloguear:", error);
+    });
+}
+
+
+</script>
+
+</body>
+</html>
