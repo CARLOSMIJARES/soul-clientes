@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Clientes Registrados | SOUL Concept Studio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet">
+<style>
+    body {
+    font-family: 'Raleway', sans-serif;
+    background-color: #e7ceb4;
+    color: black;
+    }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- HEADER -->
+<header class="w-full h-[100px] bg-[#DABEA3] flex items-center justify-center shadow-md">
+    <img src="logo.png" alt="SOUL Concept Studio" class="h-3/4 object-contain" />
+</header>
+
+<!-- CONTENIDO -->
+<main class="p-6 max-w-6xl mx-auto">
+    <button onclick="window.location.href='admin_dashboard.html'" 
+            class="mb-4 px-4 py-2 bg-white border-2 border-[#dabea3] text-[#5a3e1b] rounded shadow hover:bg-[#dabea3] hover:text-white transition w-full max-w-xs">
+    ← Regresar
+    </button>
+
+    <h1 class="text-2xl font-semibold text-center mb-6">Clientes Registrados</h1>
+
+    <div class="mb-6">
+    <input 
+        type="text" 
+        id="busquedaClientes" 
+        placeholder="Buscar por nombre, correo, teléfono..." 
+        class="w-full max-w-md mx-auto block px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-[#dabea3]" 
+    />
+    </div>
+
+    <!-- Tabla de escritorio -->
+    <div class="hidden md:block overflow-x-auto">
+    <table class="min-w-full bg-white rounded-xl shadow text-sm">
+        <thead class="bg-[#dabea3] text-white">
+        <tr>
+            <th class="text-left px-4 py-3">Nombre</th>
+            <th class="text-left px-4 py-3">Apellido</th>
+            <th class="text-left px-4 py-3">Teléfono</th>
+            <th class="text-left px-4 py-3">Correo</th>
+            <th class="text-left px-4 py-3">Fecha de Registro</th>
+            <th class="text-left px-4 py-3">Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="clientesBody" class="text-gray-700"></tbody>
+    </table>
+    </div>
+
+    <!-- Cards para móviles -->
+    <div id="cardsClientes" class="grid gap-4 md:hidden mt-4"></div>
+</main>
+
+<!-- MODAL DE EDICIÓN -->
+<div id="modalEditar" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
+    <h2 class="text-xl font-semibold mb-4">Modificar Cliente</h2>
+    <form id="formEditar">
+        <input type="hidden" id="clienteId" />
+        <div class="mb-3">
+        <label class="block mb-1">Nombre</label>
+        <input type="text" id="editNombre" class="w-full border rounded px-3 py-2" required />
+        </div>
+        <div class="mb-3">
+        <label class="block mb-1">Apellido</label>
+        <input type="text" id="editApellido" class="w-full border rounded px-3 py-2" required />
+        </div>
+        <div class="mb-3">
+        <label class="block mb-1">Teléfono</label>
+        <input type="text" id="editTelefono" class="w-full border rounded px-3 py-2" required />
+        </div>
+        <div class="mb-3">
+        <label class="block mb-1">Correo</label>
+        <input type="email" id="editCorreo" class="w-full border rounded px-3 py-2" required />
+        </div>
+        <div class="flex justify-end gap-2">
+        <button type="button" id="cancelarBtn" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
+        <button type="submit" class="px-4 py-2 bg-[#dabea3] text-white rounded">Guardar</button>
+        </div>
+    </form>
+    </div>
+</div>
+
+<!-- Firebase + Script -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyA5SMx7IhbjmDw8TjGavDYdwSpx37OthQw",
+  authDomain: "soulconceptstudioficcial.firebaseapp.com",
+  projectId: "soulconceptstudioficcial",
+  storageBucket: "soulconceptstudioficcial.firebasestorage.app",
+  messagingSenderId: "55591952377",
+  appId: "1:55591952377:web:532d6b13a0a9cc5b456728",
+  measurementId: "G-QJEM0QHH7N"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const tbody = document.getElementById("clientesBody");
+    const cardsContainer = document.getElementById("cardsClientes");
+    let listaClientes = [];
+
+    async function cargarClientes() {
+    tbody.innerHTML = "";
+    cardsContainer.innerHTML = "";
+    const clientesCol = collection(db, "CLIENTES");
+    const snapshot = await getDocs(clientesCol);
+
+    listaClientes = [];
+    snapshot.forEach(docSnap => {
+        const cliente = docSnap.data();
+        listaClientes.push({ id: docSnap.id, ...cliente });
+    });
+
+    mostrarClientes(listaClientes);
+    }
+
+    function mostrarClientes(lista) {
+    tbody.innerHTML = "";
+    cardsContainer.innerHTML = "";
+
+    lista.forEach(cliente => {
+        const id = cliente.id;
+        const fecha = cliente.fechaRegistro?.toDate().toLocaleDateString("es-ES") || '';
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+        <td class="border px-4 py-2">${cliente.nombre}</td>
+        <td class="border px-4 py-2">${cliente.apellido}</td>
+        <td class="border px-4 py-2">${cliente.telefono}</td>
+        <td class="border px-4 py-2">${cliente.correo}</td>
+        <td class="border px-4 py-2">${fecha}</td>
+        <td class="border px-4 py-2 space-x-2">
+            <button class="bg-yellow-400 text-white px-3 py-1 rounded text-xs" onclick="editarCliente('${id}', '${cliente.nombre}', '${cliente.apellido}', '${cliente.telefono}', '${cliente.correo}')">📝 Modificar</button>
+            <button class="bg-red-600 text-white px-3 py-1 rounded text-xs" onclick="eliminarCliente('${id}')">🗑️ Eliminar</button>
+        </td>`;
+        tbody.appendChild(tr);
+
+        const card = document.createElement("div");
+        card.className = "bg-white rounded-lg shadow p-4";
+        card.innerHTML = `
+        <p><strong>Nombre:</strong> ${cliente.nombre} ${cliente.apellido}</p>
+        <p><strong>Teléfono:</strong> ${cliente.telefono}</p>
+        <p><strong>Correo:</strong> ${cliente.correo}</p>
+        <p><strong>Fecha:</strong> ${fecha}</p>
+        <div class="flex flex-wrap gap-2 mt-3">
+            <button class="bg-yellow-400 text-white px-3 py-1 rounded text-sm" onclick="editarCliente('${id}', '${cliente.nombre}', '${cliente.apellido}', '${cliente.telefono}', '${cliente.correo}')">📝 Modificar</button>
+            <button class="bg-red-600 text-white px-3 py-1 rounded text-sm" onclick="eliminarCliente('${id}')">🗑️ Eliminar</button>
+        </div>`;
+        cardsContainer.appendChild(card);
+    });
+    }
+
+    window.editarCliente = (id, nombre, apellido, telefono, correo) => {
+    document.getElementById("clienteId").value = id;
+    document.getElementById("editNombre").value = nombre;
+    document.getElementById("editApellido").value = apellido;
+    document.getElementById("editTelefono").value = telefono;
+    document.getElementById("editCorreo").value = correo;
+    document.getElementById("modalEditar").classList.remove("hidden");
+    };
+
+    document.getElementById("cancelarBtn").addEventListener("click", () => {
+    document.getElementById("modalEditar").classList.add("hidden");
+    });
+
+    document.getElementById("formEditar").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = document.getElementById("clienteId").value;
+    const clienteRef = doc(db, "CLIENTES", id);
+
+    await updateDoc(clienteRef, {
+        nombre: document.getElementById("editNombre").value,
+        apellido: document.getElementById("editApellido").value,
+        telefono: document.getElementById("editTelefono").value,
+        correo: document.getElementById("editCorreo").value,
+    });
+
+    alert("Cliente actualizado correctamente.");
+    document.getElementById("modalEditar").classList.add("hidden");
+    cargarClientes();
+    });
+
+    window.eliminarCliente = async (id) => {
+    if(confirm("¿Seguro que quieres eliminar este cliente? Esta acción no se puede deshacer.")) {
+        await deleteDoc(doc(db, "CLIENTES", id));
+        alert("Cliente eliminado correctamente.");
+        cargarClientes();
+    }
+    };
+
+    document.getElementById("busquedaClientes").addEventListener("input", (e) => {
+    const texto = e.target.value.toLowerCase();
+    const filtrados = listaClientes.filter(cliente =>
+        `${cliente.nombre} ${cliente.apellido} ${cliente.telefono} ${cliente.correo} ${cliente.fechaRegistro?.toDate().toLocaleDateString("es-ES") || ''}`
+        .toLowerCase()
+        .includes(texto)
+    );
+    mostrarClientes(filtrados);
+    });
+
+    cargarClientes();
+</script>
+</body>
+</html>

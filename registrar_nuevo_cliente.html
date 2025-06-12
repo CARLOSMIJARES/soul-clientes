@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro de Cliente | SOUL Concept Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5SMx7IhbjmDw8TjGavDYdwSpx37OthQw",
+  authDomain: "soulconceptstudioficcial.firebaseapp.com",
+  projectId: "soulconceptstudioficcial",
+  storageBucket: "soulconceptstudioficcial.firebasestorage.app",
+  messagingSenderId: "55591952377",
+  appId: "1:55591952377:web:532d6b13a0a9cc5b456728",
+  measurementId: "G-QJEM0QHH7N"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("registroForm");
+      const errorMensaje = document.getElementById("correoError");
+      const repetidoMensaje = document.getElementById("correoRepetidoError");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const nombre = form.nombre.value.trim();
+        const apellido = form.apellido.value.trim();
+        const correo = form.correo.value.trim().toLowerCase();
+        const confirmarCorreo = form.confirmarCorreo.value.trim().toLowerCase();
+        const telefono = form.telefono.value.trim();
+
+        // Validación de correos iguales
+        if (correo !== confirmarCorreo) {
+          errorMensaje.classList.remove("hidden");
+          repetidoMensaje.classList.add("hidden");
+          return;
+        } else {
+          errorMensaje.classList.add("hidden");
+        }
+
+        // Validar repetición de correo en Firestore (solo si no es el correo genérico)
+        if (correo !== "noposee@gmail.com") {
+          const q = query(collection(db, "CLIENTES"), where("correo", "==", correo));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            repetidoMensaje.classList.remove("hidden");
+            return;
+          } else {
+            repetidoMensaje.classList.add("hidden");
+          }
+        }
+
+        // Guardar en Firestore con fecha de registro
+        try {
+          await addDoc(collection(db, "CLIENTES"), {
+            nombre,
+            apellido,
+            correo,
+            telefono,
+            fechaRegistro: new Date()
+          });
+
+          alert("Cliente registrado correctamente");
+          form.reset();
+        } catch (error) {
+          alert("Error al registrar cliente: " + error.message);
+        }
+      });
+    });
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Raleway', sans-serif;
+      background-color: #e7ceb4;
+      color: black;
+    }
+    input::placeholder {
+      color: #999;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- HEADER REDUCIDO -->
+  <header class="w-full h-[100px] bg-[#DABEA3] flex items-center justify-center shadow-md">
+    <img src="logo.png" alt="SOUL Concept Studio" class="h-3/4 object-contain" />
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="p-6 max-w-xl mx-auto">
+    <h1 class="text-2xl font-semibold text-center mb-6">Registro de Cliente</h1>
+
+    <form id="registroForm" class="bg-white p-6 rounded-xl shadow space-y-5">
+
+      <!-- Nombre -->
+      <div>
+        <label for="nombre" class="block font-medium mb-1">Nombre</label>
+        <input type="text" id="nombre" name="nombre" placeholder="Ej. Laura" required
+          class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#dabea3]" />
+      </div>
+
+      <!-- Apellido -->
+      <div>
+        <label for="apellido" class="block font-medium mb-1">Apellido</label>
+        <input type="text" id="apellido" name="apellido" placeholder="Ej. Martínez" required
+          class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#dabea3]" />
+      </div>
+
+      <!-- Correo -->
+      <div>
+        <label for="correo" class="block font-medium mb-1">Correo electrónico</label>
+        <input type="email" id="correo" name="correo" placeholder="cliente@email.com" required
+          class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#dabea3]" />
+        <p id="correoError" class="text-sm text-red-600 hidden mt-1">Los correos no coinciden.</p>
+        <p id="correoRepetidoError" class="text-sm text-red-600 hidden mt-1">Este correo ya está registrado.</p>
+      </div>
+
+      <!-- Confirmar Correo -->
+      <div>
+        <label for="confirmarCorreo" class="block font-medium mb-1">Confirmar correo electrónico</label>
+        <input type="email" id="confirmarCorreo" name="confirmarCorreo" placeholder="Repite el correo" required
+          class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#dabea3]" />
+      </div>
+
+      <!-- Teléfono -->
+      <div>
+        <label for="telefono" class="block font-medium mb-1">Número de teléfono</label>
+        <div class="flex items-center gap-2">
+          <span class="text-gray-600 bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 select-none">+34</span>
+          <input type="tel" id="telefono" name="telefono" placeholder="612 345 678" required pattern="[0-9]{9}"
+            class="flex-1 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#dabea3]" />
+        </div>
+        <p class="text-xs text-gray-600 mt-1">Debe contener 9 dígitos después del +34.</p>
+      </div>
+
+      <!-- Botones: Registrar y Volver -->
+      <div class="flex flex-col md:flex-row items-center justify-center gap-4 pt-4">
+        <!-- Botón Registrar -->
+        <button type="submit"
+          class="bg-[#dabea3] hover:bg-[#c6a982] text-white font-semibold py-3 px-6 rounded-lg transition-all flex-1 text-center">
+          Registrar Cliente
+        </button>
+
+        <!-- Botón Volver con ícono -->
+        <a href="admin_dashboard.html"
+           class="flex items-center gap-2 border border-gray-400 text-black font-semibold py-3 px-6 rounded-lg hover:bg-gray-100 transition-all flex-1 justify-center bg-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"
+            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          Volver a Administrador
+        </a>
+      </div>
+    </form>
+  </main>
+
+</body>
+</html>

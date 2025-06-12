@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reserva de Cliente | SOUL Concept Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Raleway', sans-serif;
+      background-color: #e7ceb4;
+      color: black;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="w-full h-[100px] bg-[#DABEA3] flex items-center justify-center shadow-md">
+    <img src="logo.png" alt="SOUL Concept Studio" class="h-3/4 object-contain" />
+  </header>
+
+  <main class="p-6 max-w-xl mx-auto">
+    <h1 class="text-2xl font-semibold text-center mb-6">Formulario de Reserva</h1>
+    <form id="reservaForm" class="bg-white p-6 rounded-xl shadow space-y-5">
+<!-- Campo Nombre + Lupa -->
+<div>
+  <label for="cliente" class="block font-medium mb-1">Nombre del Cliente</label>
+  <div class="flex items-center gap-2">
+    <input type="text" id="cliente" name="cliente" placeholder="Ej. Laura" required
+      class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#dabea3]" />
+    <button type="button" id="buscarCliente"
+      class="p-3 bg-[#dabea3] text-white rounded-lg hover:bg-[#c6a982] transition-all">
+      🔍
+    </button>
+  </div>
+</div>
+
+<!-- Campo Apellido -->
+<div>
+  <label for="apellido" class="block font-medium mb-1">Apellido del Cliente</label>
+  <input type="text" id="apellido" name="apellido" placeholder="Ej. Martínez" required
+    class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#dabea3]" />
+</div>
+
+<!-- Modal de Selección de Cliente -->
+<!-- Modal de Selección de Cliente -->
+<div id="modalClientes"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+  <div class="bg-white p-4 rounded-lg w-[90%] max-w-sm max-h-[80vh] overflow-y-auto shadow-lg">
+    <h2 class="text-lg font-semibold text-center mb-4">Seleccionar Cliente</h2>
+    <input type="text" id="busquedaCliente" placeholder="Buscar cliente..."
+      class="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[#dabea3]" />
+    <ul id="listaClientes" class="space-y-2"></ul>
+    <button id="cerrarModal"
+      class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 block mx-auto mt-4">
+      Cerrar
+    </button>
+  </div>
+</div>
+
+
+      <div>
+        <label for="fecha" class="block font-medium mb-1">Fecha</label>
+        <input type="date" id="fecha" name="fecha" required
+          class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#dabea3]" />
+      </div>
+
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label for="hora" class="block font-medium mb-1">Hora</label>
+          <select id="hora" name="hora" required
+            class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#dabea3]">
+            <option value="">HH</option>
+            <option value="09">09</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+            <option value="16">16</option>
+            <option value="17">17</option>
+            <option value="18">18</option>
+          </select>
+        </div>
+        <div class="flex-1">
+          <label for="minutos" class="block font-medium mb-1">Minutos</label>
+          <select id="minutos" name="minutos" required
+            class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#dabea3]">
+            <option value="">MM</option>
+            <option value="00">00</option>
+            <option value="15">15</option>
+            <option value="30">30</option>
+            <option value="45">45</option>
+          </select>
+        </div>
+      </div>
+
+      <input type="hidden" id="horaCompleta" name="horaCompleta" />
+
+      <div>
+        <label for="servicio" class="block font-medium mb-1">Servicio</label>
+        <select id="servicio" name="servicio" required
+          class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#dabea3]">
+          <option value="">Selecciona un servicio</option>
+        </select>
+      </div>
+
+      <div id="detallesServicio" class="text-sm text-gray-700 hidden">
+        <p><strong>Precio:</strong> <span id="precioServicio"></span> €</p>
+        <p><strong>Duración:</strong> <span id="duracionServicio"></span> minutos</p>
+      </div>
+
+      <div>
+        <label for="manicurista" class="block font-medium mb-1">Manicurista</label>
+        <select id="manicurista" name="manicurista" required
+          class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#dabea3]">
+          <option value="" disabled selected>Selecciona una manicurista</option>
+          <option value="Norle">Norle</option>
+          <option value="Dalia">Dalia</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col md:flex-row items-center justify-center gap-4 pt-4">
+        <button type="submit"
+          class="bg-[#dabea3] hover:bg-[#c6a982] text-white font-semibold py-3 px-6 rounded-lg transition-all flex-1 text-center">
+          Guardar Reserva
+        </button>
+        <a href="admin_dashboard.html"
+           class="flex items-center gap-2 border border-gray-400 text-black font-semibold py-3 px-6 rounded-lg hover:bg-gray-100 transition-all flex-1 justify-center bg-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"
+            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          Volver a Administrador
+        </a>
+      </div>
+    </form>
+  </main>
+
+  <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+const firebaseConfig = {
+ apiKey: "AIzaSyA5SMx7IhbjmDw8TjGavDYdwSpx37OthQw",
+  authDomain: "soulconceptstudioficcial.firebaseapp.com",
+  projectId: "soulconceptstudioficcial",
+  storageBucket: "soulconceptstudioficcial.firebasestorage.app",
+  messagingSenderId: "55591952377",
+  appId: "1:55591952377:web:532d6b13a0a9cc5b456728",
+  measurementId: "G-QJEM0QHH7N"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const modal = document.getElementById("modalClientes");
+const listaClientes = document.getElementById("listaClientes");
+const buscarClienteBtn = document.getElementById("buscarCliente");
+const cerrarModalBtn = document.getElementById("cerrarModal");
+const busquedaClienteInput = document.getElementById("busquedaCliente");
+
+let todosLosClientes = []; // Almacena todos los clientes para filtrado
+
+buscarClienteBtn.addEventListener("click", async () => {
+  // Mostrar modal
+  modal.classList.remove("hidden");
+  listaClientes.innerHTML = "<p>Cargando...</p>";
+
+  try {
+    const querySnapshot = await getDocs(collection(db, "CLIENTES"));
+    todosLosClientes = []; // Reinicia la lista
+    if (querySnapshot.empty) {
+      listaClientes.innerHTML = "<p>No hay clientes registrados.</p>";
+    } else {
+      listaClientes.innerHTML = "";
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        todosLosClientes.push({ id: doc.id, ...data });
+      });
+      mostrarClientesFiltrados(todosLosClientes);
+    }
+  } catch (error) {
+    listaClientes.innerHTML = `<p>Error al cargar clientes: ${error.message}</p>`;
+  }
+});
+
+cerrarModalBtn.addEventListener("click", () => {
+  modal.classList.add("hidden");
+  busquedaClienteInput.value = ""; // Limpiar campo búsqueda
+});
+
+busquedaClienteInput.addEventListener("input", (e) => {
+  const texto = e.target.value.toLowerCase();
+  const filtrados = todosLosClientes.filter(c =>
+    (`${c.nombre} ${c.apellido}`.toLowerCase().includes(texto))
+  );
+  mostrarClientesFiltrados(filtrados);
+});
+
+function mostrarClientesFiltrados(clientes) {
+  listaClientes.innerHTML = "";
+  if (clientes.length === 0) {
+    listaClientes.innerHTML = "<p>No se encontraron coincidencias.</p>";
+  } else {
+    clientes.forEach(data => {
+      const li = document.createElement("li");
+      li.className = "border p-2 rounded hover:bg-[#dabea3] cursor-pointer";
+      li.textContent = `${data.nombre} ${data.apellido}`;
+      li.addEventListener("click", () => {
+        document.getElementById("cliente").value = data.nombre;
+        document.getElementById("apellido").value = data.apellido;
+        modal.classList.add("hidden");
+        busquedaClienteInput.value = "";
+      });
+      listaClientes.appendChild(li);
+    });
+  }
+}
+
+    const servicios = [
+      { nombre: "ACRILICO (LARGO 1-2)", precio: 30, tiempo: 115 },
+      { nombre: "ACRILICO (LARGO 3-4)", precio: 35, tiempo: 135 },
+      { nombre: "BABY BOOMER", precio: 35, tiempo: 115 },
+      { nombre: "CAPA FLEX (REFUERZO)", precio: 25, tiempo: 115 },
+      { nombre: "GEL (LARGO 1-2)", precio: 30, tiempo: 115 },
+      { nombre: "GEL (LARGO 3-4)", precio: 35, tiempo: 135 },
+      { nombre: "MANICURA EXPRESS", precio: 15, tiempo: 45 },
+      { nombre: "MANICURA SEMIPERMANENTE (CON RETIRO)", precio: 20, tiempo: 115 },
+      { nombre: "MANICURA SEMIPERMANENTE (PRIMERA PUESTA)", precio: 18, tiempo: 60 },
+      { nombre: "MANICURA TRADICIONAL (SIN ESMALTE)", precio: 10, tiempo: 30 },
+      { nombre: "PEDICURA (SOLO ESMALTE SEMIPERMANENTE)", precio: 18, tiempo: 60 },
+      { nombre: "PEDICURA (SOLO ESMALTE TRADICIONAL)", precio: 10, tiempo: 45 },
+      { nombre: "PEDICURA + (ESMALTE TRADICIONAL COMPLETO)", precio: 20, tiempo: 90 },
+      { nombre: "PEDICURA COMPLETA + (ESMALTE SEMIPERMANENTE)", precio: 28, tiempo: 135 },
+      { nombre: "PEDICURA TRADICIONAL (SIN ESMALTE)", precio: 18, tiempo: 60 },
+      { nombre: "RECONSTRUCCION UÑAS MORDIDAS", precio: 35, tiempo: 115 },
+      { nombre: "RETIRO ACRILICO", precio: 12, tiempo: 60 },
+      { nombre: "RETIRO GEL", precio: 12, tiempo: 60 },
+      { nombre: "RETIRO SEMIPERMANENTE", precio: 7, tiempo: 60 },
+      { nombre: "SOLO CORTAR UÑAS (MANOS)", precio: 5, tiempo: 30 },
+      { nombre: "SOLO CORTAR UÑAS (PIES)", precio: 5, tiempo: 30 },
+      { nombre: "UÑA ROTA (MANOS)", precio: 2, tiempo: 15 },
+      { nombre: "UÑA ROTA (PIES)", precio: 3, tiempo: 15 },
+      { nombre: "UÑAS ENCARNADAS", precio: 2, tiempo: 5 }
+    ];
+
+    const form = document.getElementById("reservaForm");
+    const selectServicio = document.getElementById("servicio");
+    const precioSpan = document.getElementById("precioServicio");
+    const duracionSpan = document.getElementById("duracionServicio");
+    const detallesServicio = document.getElementById("detallesServicio");
+
+    servicios.forEach(servicio => {
+      const option = document.createElement("option");
+      option.value = servicio.nombre;
+      option.textContent = servicio.nombre;
+      selectServicio.appendChild(option);
+    });
+
+    selectServicio.addEventListener("change", () => {
+      const seleccionado = servicios.find(s => s.nombre === selectServicio.value);
+      if (seleccionado) {
+        precioSpan.textContent = seleccionado.precio;
+        duracionSpan.textContent = seleccionado.tiempo;
+        detallesServicio.classList.remove("hidden");
+      } else {
+        detallesServicio.classList.add("hidden");
+      }
+    });
+
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const cliente = form.cliente.value.trim();
+      const fecha = form.fecha.value;
+      const hora = form.hora.value;
+      const minutos = form.minutos.value;
+      const servicio = form.servicio.value;
+      const manicurista = form.manicurista.value;
+
+      if (!hora || !minutos) {
+        alert("Por favor, selecciona hora y minutos.");
+        return;
+      }
+
+      const horaCompleta = hora.padStart(2, "0") + ":" + minutos.padStart(2, "0");
+
+      const servicioSeleccionado = servicios.find(s => s.nombre === servicio);
+
+      try {
+        await addDoc(collection(db, "reservas"), {
+          cliente,
+          fecha,
+          hora: horaCompleta,
+          servicio,
+          manicurista,
+          precio: servicioSeleccionado?.precio || null,
+          duracion: servicioSeleccionado?.tiempo || null,
+          creadoEn: new Date()
+        });
+        alert("Reserva guardada correctamente!");
+        form.reset();
+        detallesServicio.classList.add("hidden");
+      } catch (error) {
+        alert("Error al guardar la reserva: " + error.message);
+      }
+    });
+  </script>
+</body>
+</html>

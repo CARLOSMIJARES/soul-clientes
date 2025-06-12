@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registrar Cliente | SOUL Concept Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"> <!-- FontAwesome -->
+  <style>
+    body {
+      font-family: 'Raleway', sans-serif;
+      background-color: #e7ceb4;
+      color: black;
+    }
+  </style>
+</head>
+<body class="min-h-screen relative">
+
+  <!-- HEADER CON LOGO -->
+  <header class="w-full h-[150px] sticky top-0 z-40 overflow-hidden bg-[#DABEA3] flex items-center justify-center">
+    <img src="logo.png" alt="SOUL Concept Studio" class="h-full object-contain" />
+  </header>
+
+  <!-- FORMULARIO DE REGISTRO -->
+  <main class="flex justify-center items-start mt-6 px-4">
+    <div class="bg-white/10 backdrop-blur-md border border-black/20 rounded-2xl p-6 shadow-xl w-full max-w-md">
+      <h2 class="text-2xl font-semibold text-center mb-4 text-black">Crear cuenta</h2>
+
+      <form id="registroForm" class="space-y-4">
+        <div>
+          <label for="nombre" class="block mb-1 text-black">Nombre</label>
+          <input type="text" id="nombre" required placeholder="Nombre"
+            class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none capitalize">
+        </div>
+        <div>
+          <label for="apellido" class="block mb-1 text-black">Apellido</label>
+          <input type="text" id="apellido" required placeholder="Apellido"
+            class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none capitalize">
+        </div>
+        <div>
+          <label for="email" class="block mb-1 text-black">Correo electrónico</label>
+          <input type="email" id="email" required placeholder="tucorreo@ejemplo.com"
+            class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none">
+        </div>
+        <div>
+          <label for="telefono" class="block mb-1 text-black">Teléfono (+34)</label>
+          <div class="flex items-center">
+            <span class="text-black font-semibold mr-2">+34</span>
+            <input type="tel" id="telefono" required placeholder="612345678"
+              class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none" pattern="^\d{9}$">
+          </div>
+        </div>
+        <div>
+          <label for="password" class="block mb-1 text-black">Contraseña</label>
+          <div class="relative">
+            <input type="password" id="password" required placeholder="Crea una contraseña"
+              class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none">
+            <button type="button" id="togglePassword" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <i class="fas fa-eye text-black w-6 h-6"></i> <!-- Ícono de ojo de FontAwesome -->
+            </button>
+          </div>
+
+          <!-- Mensajes de validación -->
+          <ul id="passwordValidation" class="mt-2 text-sm text-black">
+            <li id="uppercase" class="text-red-500">Debe contener al menos una letra mayúscula.</li>
+            <li id="lowercase" class="text-red-500">Debe contener al menos una letra minúscula.</li>
+            <li id="number" class="text-red-500">Debe contener al menos un número.</li>
+            <li id="length" class="text-red-500">Debe tener al menos 8 caracteres.</li>
+          </ul>
+        </div>
+
+        <div>
+          <label for="passwordConfirm" class="block mb-1 text-black">Confirmar Contraseña</label>
+          <div class="relative">
+            <input type="password" id="passwordConfirm" required placeholder="Confirma tu contraseña"
+              class="w-full p-2 rounded-lg bg-black/20 text-black placeholder-black/60 focus:outline-none">
+            <button type="button" id="togglePasswordConfirm" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <i class="fas fa-eye text-black w-6 h-6"></i> <!-- Ícono de ojo de FontAwesome -->
+            </button>
+          </div>
+        </div>
+
+        <button type="submit"
+          class="w-full mt-4 bg-black text-[#e7ceb4] font-semibold py-2 rounded-lg hover:bg-gray-800 transition">
+          Registrarse
+        </button>
+      </form>
+
+      <p class="text-sm text-center mt-4 text-black">
+        ¿Ya tienes una cuenta?
+        <a href="index.html" class="underline hover:text-gray-700">Inicia sesión</a>
+      </p>
+    </div>
+  </main>
+
+  <!-- Firebase SDK (modular) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5SMx7IhbjmDw8TjGavDYdwSpx37OthQw",
+  authDomain: "soulconceptstudioficcial.firebaseapp.com",
+  projectId: "soulconceptstudioficcial",
+  storageBucket: "soulconceptstudioficcial.firebasestorage.app",
+  messagingSenderId: "55591952377",
+  appId: "1:55591952377:web:532d6b13a0a9cc5b456728",
+  measurementId: "G-QJEM0QHH7N"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('registroForm');
+    const passwordInput = document.getElementById('password');
+    const passwordValidation = document.getElementById('passwordValidation');
+    const uppercase = document.getElementById('uppercase');
+    const lowercase = document.getElementById('lowercase');
+    const number = document.getElementById('number');
+    const length = document.getElementById('length');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const nombre = document.getElementById('nombre').value;
+      const apellido = document.getElementById('apellido').value;
+      const email = document.getElementById('email').value;
+      const telefono = "+34" + document.getElementById('telefono').value;  // Añadir el prefijo +34
+      const password = document.getElementById('password').value;
+      const passwordConfirm = document.getElementById('passwordConfirm').value;
+
+      // Verificar si las contraseñas coinciden
+      if (password !== passwordConfirm) {
+        alert("Las contraseñas no coinciden.");
+        return;
+      }
+
+      try {
+        const credencial = await createUserWithEmailAndPassword(auth, email, password);
+        const user = credencial.user;
+
+        // Guardar datos del cliente en Firestore
+        await setDoc(doc(db, "CLIENTES", user.uid), {
+          nombre,
+          apellido,
+          email,
+          telefono,
+          fechaRegistro: new Date()  // Fecha de registro
+        });
+
+        // Enviar correo de verificación
+        await sendEmailVerification(user);
+
+        alert('Registro exitoso. Revisa tu correo para verificar tu cuenta.');
+        window.location.href = 'index.html';
+
+      } catch (error) {
+        console.error("Error en el registro:", error);
+        alert('Error: ' + error.message);
+      }
+    });
+
+    // Función para validar la contraseña
+    passwordInput.addEventListener('input', function () {
+      const passwordValue = passwordInput.value;
+
+      // Validar mayúsculas
+      const uppercaseReg = /[A-Z]/;
+      if (uppercaseReg.test(passwordValue)) {
+        uppercase.classList.replace('text-red-500', 'text-green-500');
+      } else {
+        uppercase.classList.replace('text-green-500', 'text-red-500');
+      }
+
+      // Validar minúsculas
+      const lowercaseReg = /[a-z]/;
+      if (lowercaseReg.test(passwordValue)) {
+        lowercase.classList.replace('text-red-500', 'text-green-500');
+      } else {
+        lowercase.classList.replace('text-green-500', 'text-red-500');
+      }
+
+      // Validar números
+      const numberReg = /[0-9]/;
+      if (numberReg.test(passwordValue)) {
+        number.classList.replace('text-red-500', 'text-green-500');
+      } else {
+        number.classList.replace('text-green-500', 'text-red-500');
+      }
+
+      // Validar longitud
+      if (passwordValue.length >= 8) {
+        length.classList.replace('text-red-500', 'text-green-500');
+      } else {
+        length.classList.replace('text-green-500', 'text-red-500');
+      }
+    });
+
+    // Mostrar/ocultar contraseña
+    const togglePassword = document.getElementById('togglePassword');
+    togglePassword.addEventListener('click', function () {
+      const type = passwordInput.type === 'password' ? 'text' : 'password';
+      passwordInput.type = type;
+      this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+
+    const togglePasswordConfirm = document.getElementById('togglePasswordConfirm');
+    togglePasswordConfirm.addEventListener('click', function () {
+      const type = document.getElementById('passwordConfirm').type === 'password' ? 'text' : 'password';
+      document.getElementById('passwordConfirm').type = type;
+      this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+  </script>
+</body>
+</html>
